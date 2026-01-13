@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Coin Flip Physics - Table Stacking</title>
+  <title>Coin Shake Flip</title>
   <style>
     body {
       margin: 0;
@@ -45,15 +45,11 @@
       touch-action: manipulation;
     }
     button:disabled { background: #444; opacity: 0.6; }
-    #flip-all {
-      padding: 14px 28px !important;
-      font-size: 1.1rem !important;
-      background: #00d4ff !important;
-      margin-top: 8px;
-      display: block;
-      width: 90%;
-      max-width: 300px;
-      margin: 8px auto;
+    #shake-instruction {
+      text-align: center;
+      font-size: 1.2rem;
+      color: #00d4ff;
+      margin: 10px;
     }
     #coins-container {
       position: relative;
@@ -109,7 +105,7 @@
 <body>
 
 <header>
-  <h1>🪙 Coin Flip Physics</h1>
+  <h1>🪙 Coin Shake Flip</h1>
   <div id="stats">
     $<span id="money">0</span> 
     • Bronze: <span id="bronze-count">1</span> 
@@ -120,7 +116,7 @@
     <button id="buy-bronze">Buy Bronze ($10)</button>
     <button id="buy-silver">Unlock Silver ($50)</button>
   </div>
-  <button id="flip-all">🚀 Flip All ($1)</button>
+  <div id="shake-instruction">Shake phone to flip coins!</div>
 </header>
 
 <div id="coins-container"></div>
@@ -134,19 +130,20 @@ let bronze = Number(localStorage.getItem('flipBronze')) || 1;
 let silver = Number(localStorage.getItem('flipSilver')) || 0;
 let streak = Number(localStorage.getItem('flipStreak')) || 0;
 
-const FLIP_ALL_COST = 1; // $1 per use
-
 const moneyEl = document.getElementById('money');
 const bronzeEl = document.getElementById('bronze-count');
 const silverEl = document.getElementById('silver-count');
 const streakEl = document.getElementById('streak-count');
 const container = document.getElementById('coins-container');
 const msg = document.getElementById('message');
-const flipAllBtn = document.getElementById('flip-all');
 
 let engine, world, runner;
 let coins = [];
-let ground, leftWall, rightWall;
+let ground, leftWall, rightWall, topWall;
+
+let lastShakeTime = 0;
+const SHAKE_THRESHOLD = 20; // adjust sensitivity
+const SHAKE_COOLDOWN = 2000; // ms to prevent rapid shakes
 
 function save() {
   localStorage.setItem('flipMoney', money);
@@ -167,8 +164,6 @@ function updateUI() {
   const silverBtn = document.getElementById('buy-silver');
   silverBtn.textContent = silver === 0 ? `Unlock Silver ($${silverCost})` : `Buy Silver ($${silverCost})`;
   silverBtn.disabled = money < silverCost;
-  flipAllBtn.textContent = `🚀 Flip All ($${FLIP_ALL_COST})`;
-  flipAllBtn.disabled = money < FLIP_ALL_COST;
 }
 
 function nextBronzeCost() {
@@ -188,26 +183,45 @@ function showMessage(text, color = '#0f8') {
 
 function initPhysics() {
   engine = Matter.Engine.create();
+  engine.gravity.y = 1.5; // slightly higher gravity for quicker lands
   world = engine.world;
   runner = Matter.Runner.create();
   Matter.Runner.run(runner, engine);
 
-  // Ground
-  ground = Matter.Bodies.rectangle(container.clientWidth / 2, container.clientHeight, container.clientWidth, 50, { isStatic: true });
-  Matter.World.add(world, ground);
+  // Boundaries
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  ground = Matter.Bodies.rectangle(width / 2, height, width, 50, { isStatic: true });
+  leftWall = Matter.Bodies.rectangle(0, height / 2, 50, height, { isStatic: true });
+  rightWall = Matter.Bodies.rectangle(width, height / 2, 50, height, { isStatic: true });
+  topWall = Matter.Bodies.rectangle(width / 2, 0, width, 50, { isStatic: true });
+  Matter.World.add(world, [ground, leftWall, rightWall, topWall]);
 
-  // Walls
-  leftWall = Matter.Bodies.rectangle(0, container.clientHeight / 2, 50, container.clientHeight, { isStatic: true });
-  rightWall = Matter.Bodies.rectangle(container.clientWidth, container.clientHeight / 2, 50, container.clientHeight, { isStatic: true });
-  Matter.World.add(world, [leftWall, rightWall]);
-
-  // Render loop to update DOM positions
+  // Update DOM
   Matter.Events.on(engine, 'afterUpdate', () => {
     coins.forEach(coin => {
-      coin.elem.style.transform = `translate(${coin.body.position.x - 35}px, ${coin.body.position.y - 35}px) rotate(${coin.body.angle}rad)`;
-      if (coin.body.velocity.y > 0 && coin.body.position.y >= container.clientHeight - 35 - 10 && !coin.landed) {
-        coin.landed = true;
-        landCoin(coin);
+      const pos = coin.body.position;
+      coin.elem.style.left = `${pos.x - 35}px`;
+      coin.elem.style.top = `${pos.y - 35}px`;
+      coin.elem.style.transform = `rotate(${coin.body.angle}rad)`;
+
+      // Check for landing (low velocity)
+      const vel = coin.body.velocity;
+      if (Math.abs(vel.x) < 0.5 && Math.abs(vel.y) < 0.5 && !coin.revealed) {
+        coin.revealed = true;
+        coin.elem.innerText = coin.isHeads ? '$' : '☠';
+        if (coin.isHeads) {
+          const multi = streak >= 4 ? 1.2 : 1;
+          const earned = Math.floor(coin.reward * multi);
+          money += earned;
+          streak++;
+          showMessage(`+$${earned}${multi > 1 ? ' 🔥' : ''}`, '#4caf50');
+        } else {
+          streak = 0;
+          showMessage('💀', '#f44336');
+        }
+        save();
+        updateUI();
       }
     });
   });
@@ -215,72 +229,44 @@ function initPhysics() {
 
 function createCoin(type) {
   const radius = 35;
-  const body = Matter.Bodies.circle(container.clientWidth / 2, 100, radius, {
-    restitution: 0.5, // bounciness
-    friction: 0.4, // friction for rolling
-    density: 0.001
+  const body = Matter.Bodies.circle(Math.random() * container.clientWidth, Math.random() * 100, radius, {
+    restitution: 0.6, // bouncy
+    friction: 0.3,
+    density: 0.002
   });
   Matter.World.add(world, body);
 
   const elem = document.createElement('div');
   elem.className = 'coin ' + type;
-  elem.innerText = '?'; // initial
+  elem.innerText = '?';
 
-  const coin = { body, elem, type, landed: false, isHeads: Math.random() < 0.5, reward: type === 'silver' ? 5 : 1 };
-
-  elem.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    flipCoin(coin);
-  });
-  elem.addEventListener('click', (e) => {
-    flipCoin(coin);
-  });
+  const coin = { body, elem, type, revealed: false, isHeads: Math.random() < 0.5, reward: type === 'silver' ? 5 : 1 };
 
   container.appendChild(elem);
   return coin;
 }
 
-function flipCoin(coin) {
-  if (coin.landed) return;
-  Matter.Body.applyForce(coin.body, coin.body.position, { x: (Math.random() - 0.5) * 0.02, y: -0.05 });
-  Matter.Body.setAngularVelocity(coin.body, (Math.random() - 0.5) * 0.1);
-  coin.landed = false; // reset for new flip
+function shakeCoins() {
+  const now = Date.now();
+  if (now - lastShakeTime < SHAKE_COOLDOWN) return;
+  lastShakeTime = now;
+
+  coins.forEach(coin => {
+    coin.revealed = false;
+    coin.elem.innerText = '?';
+    Matter.Body.applyForce(coin.body, coin.body.position, { x: (Math.random() - 0.5) * 0.03, y: -0.08 });
+    Matter.Body.setAngularVelocity(coin.body, (Math.random() - 0.5) * 0.2);
+  });
+  showMessage('Shake! 🎲', '#00d4ff');
 }
 
-function landCoin(coin) {
-  coin.elem.innerText = coin.isHeads ? '$' : '☠';
-  coin.elem.style.color = coin.isHeads ? '#0f0' : '#f00';
-  if (coin.isHeads) {
-    const multi = streak >= 4 ? 1.2 : 1;
-    const earned = Math.floor(coin.reward * multi);
-    money += earned;
-    streak++;
-    showMessage(`+$${earned}${multi > 1 ? ' 🔥' : ''}`, '#4caf50');
-  } else {
-    streak = 0;
-    showMessage('💀', '#f44336');
-  }
-  save();
-  updateUI();
-}
-
-function renderCoins() {
-  for (let i = 0; i < bronze; i++) {
-    coins.push(createCoin('bronze'));
-  }
-  for (let i = 0; i < silver; i++) {
-    coins.push(createCoin('silver'));
+function handleShake(event) {
+  const acceleration = event.accelerationIncludingGravity;
+  const shake = Math.sqrt(acceleration.x**2 + acceleration.y**2 + acceleration.z**2);
+  if (shake > SHAKE_THRESHOLD) {
+    shakeCoins();
   }
 }
-
-document.getElementById('flip-all').onclick = () => {
-  if (money < FLIP_ALL_COST) return;
-  money -= FLIP_ALL_COST;
-  coins.forEach(flipCoin);
-  showMessage('Flipping All! 💥', '#00d4ff');
-  save();
-  updateUI();
-};
 
 document.getElementById('buy-bronze').onclick = () => {
   const cost = nextBronzeCost();
@@ -308,8 +294,16 @@ document.getElementById('buy-silver').onclick = () => {
 
 // Init
 initPhysics();
-renderCoins();
+for (let i = 0; i < bronze; i++) coins.push(createCoin('bronze'));
+for (let i = 0; i < silver; i++) coins.push(createCoin('silver'));
 updateUI();
+
+// Shake detection
+if (window.DeviceMotionEvent) {
+  window.addEventListener('devicemotion', handleShake);
+} else {
+  showMessage('Shake not supported', '#f44');
+}
 </script>
 </body>
 </html>
