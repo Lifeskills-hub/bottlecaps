@@ -58,28 +58,22 @@
     #coins-container {
       position: relative;
       padding: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 16px;
       height: calc(100vh - 220px);
-      overflow-y: auto;
+      overflow: hidden;
       background: radial-gradient(circle at center, #222 0%, #111 100%);
     }
     .coin {
+      position: absolute;
       width: 70px;
       height: 70px;
-      position: relative;
       perspective: 1000px;
       cursor: pointer;
-      transition: none;
     }
     .coin-inner {
       width: 100%;
       height: 100%;
       position: absolute;
       transform-style: preserve-3d;
-      transition: transform 0.2s ease;
     }
     .side {
       position: absolute;
@@ -110,38 +104,6 @@
     .silver .tails { background: linear-gradient(145deg, #696969, #505050); }
     .animating {
       pointer-events: none;
-    }
-    .coin.jumping {
-      animation: jump 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-    }
-    @keyframes jump {
-      0% {
-        transform: translateX(var(--start-x)) translateY(var(--start-y)) scale(1);
-      }
-      15% {
-        transform: translateX(calc(var(--start-x) + 0.15 * var(--delta-x))) translateY(calc(var(--start-y) + 0.15 * var(--delta-y) - 50px)) scale(1.12);
-      }
-      40% {
-        transform: translateX(calc(var(--start-x) + 0.4 * var(--delta-x))) translateY(calc(var(--start-y) + 0.4 * var(--delta-y) - 110px)) scale(1.08);
-      }
-      65% {
-        transform: translateX(calc(var(--start-x) + 0.65 * var(--delta-x))) translateY(calc(var(--start-y) + 0.65 * var(--delta-y) - 45px)) scale(1.03);
-      }
-      85% {
-        transform: translateX(calc(var(--start-x) + 0.85 * var(--delta-x))) translateY(calc(var(--start-y) + 0.85 * var(--delta-y) + 5px)) scale(0.98);
-      }
-      95% {
-        transform: translateX(calc(var(--start-x) + 0.95 * var(--delta-x))) translateY(calc(var(--start-y) + 0.95 * var(--delta-y) - 2px)) scale(0.99);
-      }
-      100% {
-        transform: translateX(calc(var(--start-x) + var(--delta-x))) translateY(calc(var(--start-y) + var(--delta-y))) scale(1);
-      }
-    }
-    .coin.flipping .coin-inner {
-      animation: spin 1.2s linear both;
-    }
-    @keyframes spin {
-      to { transform: rotateY(1440deg); }
     }
     .coin.win {
       animation: glow 0.6s ease-in-out infinite alternate;
@@ -207,7 +169,12 @@ let bronze = Number(localStorage.getItem('flipBronze')) || 1;
 let silver = Number(localStorage.getItem('flipSilver')) || 0;
 let streak = Number(localStorage.getItem('flipStreak')) || 0;
 
-const FLIP_ALL_COST = 1; // $1 per use – makes it a premium convenience, addictive but costs to spam
+const FLIP_ALL_COST = 1;
+
+let coins = [];
+let contWidth, contHeight, groundY;
+let physicsId = null;
+let lastTime = 0;
 
 const moneyEl = document.getElementById('money');
 const bronzeEl = document.getElementById('bronze-count');
@@ -236,8 +203,10 @@ function updateUI() {
   const silverBtn = document.getElementById('buy-silver');
   silverBtn.textContent = silver === 0 ? `Unlock Silver ($${silverCost})` : `Buy Silver ($${silverCost})`;
   silverBtn.disabled = money < silverCost;
-  flipAllBtn.textContent = `🚀 Flip All ($${FLIP_ALL_COST})`;
-  flipAllBtn.disabled = money < FLIP_ALL_COST;
+
+  const readyCount = coins.filter(c => !c.isAnimating).length;
+  flipAllBtn.textContent = `🚀 Flip All ($${FLIP_ALL_COST}) ${readyCount ? `(${readyCount})` : 'None'}`;
+  flipAllBtn.disabled = money < FLIP_ALL_COST || readyCount === 0;
 }
 
 function nextBronzeCost() {
@@ -255,35 +224,84 @@ function showMessage(text, color = '#0f8') {
   setTimeout(() => msg.classList.remove('show'), 1000);
 }
 
-function createCoin(type) {
-  const coin = document.createElement('div');
-  coin.className = `coin ${type}`;
-  coin.innerHTML = `
+function updateContDims() {
+  contWidth = container.clientWidth - 40;
+  contHeight = container.clientHeight - 40;
+  groundY = contHeight - 35;
+}
+
+function canPlace(x, y) {
+  for (let other of coins) {
+    if (!other.isAnimating) {
+      const dx = x - other.x;
+      const dy = y - other.y;
+      if (Math.hypot(dx, dy) < 75) return false;
+    }
+  }
+  return true;
+}
+
+function placeRandom(obj) {
+  const tries = 100;
+  for (let i = 0; i < tries; i++) {
+    const x = 35 + Math.random() * (contWidth - 70);
+    const y = groundY;
+    if (canPlace(x, y)) {
+      obj.x = x;
+      obj.y = y;
+      updateCoinPos(obj);
+      return;
+    }
+  }
+  // fallback
+  obj.x = contWidth / 2;
+  obj.y = groundY;
+  updateCoinPos(obj);
+}
+
+function createCoinObj(type) {
+  const elem = document.createElement('div');
+  elem.className = `coin ${type}`;
+  elem.innerHTML = `
     <div class="coin-inner">
       <div class="side heads">$</div>
       <div class="side tails">☠</div>
     </div>
   `;
-  coin.style.transform = 'translateX(0px) translateY(0px)';
-  coin.addEventListener('touchstart', (e) => {
+  const obj = {
+    elem,
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    rotating: 0,
+    isAnimating: false,
+    isHeads: false,
+    reward: type === 'silver' ? 5 : 1
+  };
+  elem._coinObj = obj;
+  elem.addEventListener('touchstart', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    flipThisCoin(coin);
-  });
-  coin.addEventListener('click', (e) => {
+    flipThisCoin(obj);
+  }, { passive: false });
+  elem.addEventListener('click', (e) => {
     e.preventDefault();
-    flipThisCoin(coin);
+    flipThisCoin(obj);
   });
-  return coin;
+  return obj;
 }
 
 function addCoin(type) {
-  const coin = createCoin(type);
-  container.appendChild(coin);
+  const obj = createCoinObj(type);
+  placeRandom(obj);
+  container.appendChild(obj.elem);
+  return obj;
 }
 
 function renderCoins() {
-  // Only on init, add all
+  coins = [];
+  container.innerHTML = '';
   for (let i = 0; i < bronze; i++) {
     addCoin('bronze');
   }
@@ -292,82 +310,153 @@ function renderCoins() {
   }
 }
 
-const ANIM_DURATION = 1200;
+function updateCoinPos(coin) {
+  coin.elem.style.left = (coin.x - 35) + 'px';
+  coin.elem.style.top = (coin.y - 35) + 'px';
+  const inner = coin.elem.querySelector('.coin-inner');
+  inner.style.transform = `rotateY(${coin.rotating % 360}deg)`;
+}
+
+function landCoin(coin) {
+  const targetRot = coin.isHeads ? 0 : 180;
+  coin.rotating = targetRot;
+  updateCoinPos(coin);
+  coin.elem.classList.remove('animating');
+
+  if (coin.isHeads) {
+    const multi = streak >= 4 ? 1.2 : 1;
+    const earned = Math.floor(coin.reward * multi);
+    money += earned;
+    streak++;
+    showMessage(`+$${earned}${multi > 1 ? ' 🔥' : ''}`, '#4caf50');
+    coin.elem.classList.add('win');
+    setTimeout(() => coin.elem.classList.remove('win'), 800);
+  } else {
+    streak = 0;
+    showMessage('💀', '#f44336');
+    coin.elem.classList.add('lose');
+    setTimeout(() => coin.elem.classList.remove('lose'), 400);
+  }
+  save();
+  updateUI();
+}
+
 function flipThisCoin(coin) {
-  if (coin.classList.contains('animating')) return;
+  if (coin.isAnimating) return;
+  coin.isHeads = Math.random() < 0.5;
+  coin.vx = (Math.random() - 0.5) * 800;
+  coin.vy = -700;
+  coin.rotating = 0;
+  coin.isAnimating = true;
+  coin.elem.classList.add('animating');
+  startPhysics();
+}
 
-  const isSilver = coin.classList.contains('silver');
-  const reward = isSilver ? 5 : 1;
-  const isHeads = Math.random() < 0.5;
+const GRAVITY = 1200;
+const SPIN_SPEED = 1440;
+function updatePhysics(dt) {
+  let anyAnimating = false;
 
-  // Get current transform
-  const transform = coin.style.transform || 'translateX(0px) translateY(0px)';
-  const matchX = transform.match(/translateX\(([^\)]+)\)/);
-  const matchY = transform.match(/translateY\(([^\)]+)\)/);
-  let currentX = matchX ? parseFloat(matchX[1]) : 0;
-  let currentY = matchY ? parseFloat(matchY[1]) : 0;
-
-  // Calculate deltas
-  let deltaX = (Math.random() - 0.5) * 100; // Horizontal jump distance
-  let deltaY = (Math.random() - 0.5) * 60; // Vertical jump distance, smaller to keep on screen
-
-  // Clamp to container bounds
-  const contRect = container.getBoundingClientRect();
-  let proposedX = currentX + deltaX;
-  let proposedY = currentY + deltaY;
-  proposedX = Math.max(0, Math.min(proposedX, contRect.width - 70));
-  proposedY = Math.max(0, Math.min(proposedY, contRect.height - 70));
-  deltaX = proposedX - currentX;
-  deltaY = proposedY - currentY;
-
-  // Set variables for animation
-  coin.style.setProperty('--start-x', `${currentX}px`);
-  coin.style.setProperty('--start-y', `${currentY}px`);
-  coin.style.setProperty('--delta-x', `${deltaX}px`);
-  coin.style.setProperty('--delta-y', `${deltaY}px`);
-
-  const coinInner = coin.querySelector('.coin-inner');
-  coin.classList.add('animating', 'jumping', 'flipping');
-
-  setTimeout(() => {
-    coin.classList.remove('jumping', 'flipping');
-    coinInner.style.transform = `rotateY(${isHeads ? '0deg' : '180deg'})`;
-    coin.style.transform = `translateX(${proposedX}px) translateY(${proposedY}px)`;
-
-    if (isHeads) {
-      const multi = streak >= 4 ? 1.2 : 1;
-      const earned = Math.floor(reward * multi);
-      money += earned;
-      streak++;
-      showMessage(`+$${earned}${multi > 1 ? ' 🔥' : ''}`, '#4caf50');
-      coin.classList.add('win');
-      setTimeout(() => coin.classList.remove('win'), 800);
-    } else {
-      streak = 0;
-      showMessage('💀', '#f44336');
-      coin.classList.add('lose');
-      setTimeout(() => coin.classList.remove('lose'), 400);
+  // Update velocities and positions
+  for (let coin of coins) {
+    if (coin.isAnimating) {
+      coin.vy += GRAVITY * dt;
+      coin.x += coin.vx * dt;
+      coin.y += coin.vy * dt;
+      coin.rotating += SPIN_SPEED * dt;
+      anyAnimating = true;
     }
+  }
 
-    coin.classList.remove('animating');
-    save();
-    updateUI();
-  }, ANIM_DURATION);
+  // Collisions
+  for (let i = 0; i < coins.length; i++) {
+    for (let j = i + 1; j < coins.length; j++) {
+      const c1 = coins[i];
+      const c2 = coins[j];
+      const dx = c2.x - c1.x;
+      const dy = c2.y - c1.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 70 && (c1.isAnimating || c2.isAnimating)) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const dvx = c1.vx - c2.vx;
+        const dvy = c1.vy - c2.vy;
+        const velAlongNormal = dvx * nx + dvy * ny;
+        if (velAlongNormal > 0) continue;
+        const e = 0.8;
+        const j = -(1 + e) * velAlongNormal / 2;
+        c1.vx += j * nx;
+        c1.vy += j * ny;
+        c2.vx -= j * nx;
+        c2.vy -= j * ny;
+        // Separate
+        const overlap = 70 - dist;
+        c1.x -= nx * overlap / 2;
+        c1.y -= ny * overlap / 2;
+        c2.x += nx * overlap / 2;
+        c2.y += ny * overlap / 2;
+      }
+    }
+  }
+
+  // Bounds and ground
+  for (let coin of coins) {
+    if (coin.isAnimating) {
+      // Walls
+      if (coin.x < 35) {
+        coin.x = 35;
+        coin.vx = -coin.vx * 0.7;
+      }
+      if (coin.x > contWidth - 35) {
+        coin.x = contWidth - 35;
+        coin.vx = -coin.vx * 0.7;
+      }
+      if (coin.y < 35) {
+        coin.y = 35;
+        coin.vy = -coin.vy * 0.7;
+      }
+      // Ground
+      if (coin.y >= groundY) {
+        coin.y = groundY;
+        coin.vy = 0;
+        coin.vx *= 0.7;
+        if (Math.abs(coin.vx) < 30) {
+          coin.isAnimating = false;
+          landCoin(coin);
+        }
+        anyAnimating = true;
+      }
+      updateCoinPos(coin);
+    }
+  }
+
+  return anyAnimating;
+}
+
+function physicsLoop(currentTime) {
+  const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
+  lastTime = currentTime;
+  const any = updatePhysics(dt);
+  if (any) {
+    physicsId = requestAnimationFrame(physicsLoop);
+  } else {
+    physicsId = null;
+  }
+}
+
+function startPhysics() {
+  if (physicsId === null) {
+    lastTime = performance.now();
+    physicsId = requestAnimationFrame(physicsLoop);
+  }
 }
 
 document.getElementById('flip-all').onclick = () => {
-  if (money < FLIP_ALL_COST) {
-    showMessage('Not enough $!', '#ff9800');
-    return;
-  }
+  if (flipAllBtn.disabled) return;
   money -= FLIP_ALL_COST;
-  const readyCoins = container.querySelectorAll('.coin:not(.animating)');
-  if (readyCoins.length === 0) {
-    showMessage('No coins ready!', '#ff9800');
-    return;
-  }
-  readyCoins.forEach(flipThisCoin);
-  showMessage('Flipping All! 💥', '#00d4ff');
+  const ready = coins.filter(c => !c.isAnimating);
+  ready.forEach(flipThisCoin);
+  showMessage(`Flipped ${ready.length}! 💥`, '#00d4ff');
   save();
   updateUI();
 };
@@ -376,8 +465,8 @@ document.getElementById('buy-bronze').onclick = () => {
   const cost = nextBronzeCost();
   if (money >= cost) {
     money -= cost;
-    bronze++;
     addCoin('bronze');
+    bronze++;
     showMessage('🪙 Bronze!', '#ff9800');
     save();
     updateUI();
@@ -388,17 +477,20 @@ document.getElementById('buy-silver').onclick = () => {
   const cost = nextSilverCost();
   if (money >= cost) {
     money -= cost;
-    silver++;
     addCoin('silver');
+    silver++;
     showMessage('⭐ Silver!', '#c0c0c0');
     save();
     updateUI();
   }
 };
 
+window.addEventListener('resize', updateContDims);
+
 // Init
-updateUI();
+updateContDims();
 renderCoins();
+updateUI();
 </script>
 </body>
 </html>
