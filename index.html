@@ -21,36 +21,64 @@
       text-align: center;
       border-bottom: 1px solid #444;
     }
-    h1 { margin: 8px; font-size: 1.5rem; }
+    h1 { margin: 8px 0 4px 0; font-size: 1.5rem; }
     #stats {
       font-size: 1.1rem;
-      margin: 8px 0;
+      margin: 4px 0 12px 0;
+    }
+    #stats span { color: #ffd700; }
+    #buy-row {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 10px 16px;
+      margin: 2px;
+      font-size: 0.95rem;
+      border: none;
+      border-radius: 8px;
+      background: #6200ea;
+      color: white;
+      font-weight: bold;
+      touch-action: manipulation;
+    }
+    button:disabled { background: #444; opacity: 0.6; }
+    #flip-all {
+      padding: 14px 28px !important;
+      font-size: 1.1rem !important;
+      background: #00d4ff !important;
+      margin-top: 8px;
+      display: block;
+      width: 90%;
+      max-width: 300px;
+      margin: 8px auto;
     }
     #coins-container {
-      padding: 16px;
+      padding: 20px;
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 16px;
-      height: calc(100vh - 140px);
+      height: calc(100vh - 220px);
       overflow-y: auto;
+      background: radial-gradient(circle at center, #222 0%, #111 100%);
     }
     .coin {
-      width: 90px;
-      height: 90px;
+      width: 70px;
+      height: 70px;
       position: relative;
       perspective: 1000px;
       cursor: pointer;
+      transition: none;
     }
     .coin-inner {
       width: 100%;
       height: 100%;
       position: absolute;
       transform-style: preserve-3d;
-      transition: transform 0.7s;
-    }
-    .coin.flipping .coin-inner {
-      transform: rotateY(1080deg);
+      transition: transform 0.2s ease;
     }
     .side {
       position: absolute;
@@ -61,49 +89,96 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 3rem;
+      font-size: 2rem;
       font-weight: bold;
       box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+      border: 2px solid #333;
     }
-    .heads { background: linear-gradient(145deg, #ffd700, #d4a017); color: #000; }
-    .tails { background: linear-gradient(145deg, #555, #333); color: #fff; transform: rotateY(180deg); }
-    .bronze .heads { background: linear-gradient(145deg, #cd7f32, #a55d1a); }
-    .silver .heads { background: linear-gradient(145deg, #c0c0c0, #8a8a8a); }
-    button {
-      padding: 12px 20px;
-      margin: 6px;
-      font-size: 1rem;
-      border: none;
-      border-radius: 8px;
-      background: #6200ea;
-      color: white;
-      font-weight: bold;
+    .heads { 
+      background: linear-gradient(145deg, #ffd700, #d4a017); 
+      color: #000; 
     }
-    button:disabled { background: #444; }
+    .tails { 
+      background: linear-gradient(145deg, #555, #333); 
+      color: #fff; 
+      transform: rotateY(180deg); 
+    }
+    .bronze .heads { background: linear-gradient(145deg, #cd7f32, #b8860b); }
+    .bronze .tails { background: linear-gradient(145deg, #8b4513, #654321); }
+    .silver .heads { background: linear-gradient(145deg, #c0c0c0, #a9a9a9); }
+    .silver .tails { background: linear-gradient(145deg, #696969, #505050); }
+    .animating {
+      pointer-events: none;
+    }
+    .coin.jumping {
+      animation: jump 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    }
+    @keyframes jump {
+      0% { transform: translateY(0) scale(1); }
+      15% { transform: translateY(-50px) scale(1.12); }
+      40% { transform: translateY(-110px) scale(1.08); }
+      65% { transform: translateY(-45px) scale(1.03); }
+      85% { transform: translateY(5px) scale(0.98); }
+      95% { transform: translateY(-2px) scale(0.99); }
+      100% { transform: translateY(0) scale(1); }
+    }
+    .coin.flipping .coin-inner {
+      animation: spin 1.2s linear both;
+    }
+    @keyframes spin {
+      to { transform: rotateY(1440deg); }
+    }
+    .coin.win {
+      animation: glow 0.6s ease-in-out infinite alternate;
+    }
+    @keyframes glow {
+      0% { box-shadow: 0 0 10px #4caf50, 0 0 20px #4caf50; }
+      100% { box-shadow: 0 0 20px #8bc34a, 0 0 40px #8bc34a; }
+    }
+    .coin.lose {
+      animation: shake 0.25s ease-in-out;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-3px); }
+      40% { transform: translateX(3px); }
+      60% { transform: translateX(-2px); }
+      80% { transform: translateX(2px); }
+    }
     #message {
       position: fixed;
-      top: 40%;
+      top: 45%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 2.5rem;
+      font-size: 2.8rem;
       font-weight: bold;
       pointer-events: none;
       opacity: 0;
-      transition: opacity 0.4s;
-      text-shadow: 0 0 10px #000;
+      transition: opacity 0.3s, transform 0.3s;
+      text-shadow: 0 0 15px #000;
+      z-index: 100;
     }
-    #message.show { opacity: 1; }
+    #message.show { 
+      opacity: 1; 
+      transform: translate(-50%, -50%) scale(1.1);
+    }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>Coin Flip</h1>
-  <div id="stats">$<span id="money">0</span>  •  Bronze: <span id="bronze">1</span>  •  Silver: <span id="silver">0</span></div>
-  <div>
-    <button id="buy-bronze">Buy Bronze</button>
-    <button id="buy-silver">Buy Silver</button>
+  <h1>🪙 Coin Flip</h1>
+  <div id="stats">
+    $<span id="money">0</span> 
+    • Bronze: <span id="bronze-count">1</span> 
+    • Silver: <span id="silver-count">0</span> 
+    • Streak: <span id="streak-count">0</span>
   </div>
+  <div id="buy-row">
+    <button id="buy-bronze">Buy Bronze ($10)</button>
+    <button id="buy-silver">Unlock Silver ($50)</button>
+  </div>
+  <button id="flip-all">🚀 Flip All Ready</button>
 </header>
 
 <div id="coins-container"></div>
@@ -115,11 +190,12 @@
 let money = Number(localStorage.getItem('flipMoney')) || 0;
 let bronze = Number(localStorage.getItem('flipBronze')) || 1;
 let silver = Number(localStorage.getItem('flipSilver')) || 0;
-let streak = 0;
+let streak = Number(localStorage.getItem('flipStreak')) || 0;
 
 const moneyEl = document.getElementById('money');
-const bronzeEl = document.getElementById('bronze');
-const silverEl = document.getElementById('silver');
+const bronzeEl = document.getElementById('bronze-count');
+const silverEl = document.getElementById('silver-count');
+const streakEl = document.getElementById('streak-count');
 const container = document.getElementById('coins-container');
 const msg = document.getElementById('message');
 
@@ -127,33 +203,36 @@ function save() {
   localStorage.setItem('flipMoney', money);
   localStorage.setItem('flipBronze', bronze);
   localStorage.setItem('flipSilver', silver);
+  localStorage.setItem('flipStreak', streak);
 }
 
 function updateUI() {
   moneyEl.textContent = Math.floor(money);
   bronzeEl.textContent = bronze;
   silverEl.textContent = silver;
-  document.getElementById('buy-bronze').textContent = `Buy Bronze ($${nextBronzeCost()})`;
-  document.getElementById('buy-silver').textContent = silver === 0 ? `Unlock Silver ($${nextSilverCost()})` : `Buy Silver ($${nextSilverCost()})`;
-  document.getElementById('buy-bronze').disabled = money < nextBronzeCost();
-  document.getElementById('buy-silver').disabled = money < nextSilverCost();
+  streakEl.textContent = streak;
+  const bronzeCost = nextBronzeCost();
+  const silverCost = nextSilverCost();
+  document.getElementById('buy-bronze').textContent = `Buy Bronze ($${bronzeCost})`;
+  document.getElementById('buy-bronze').disabled = money < bronzeCost;
+  const silverBtn = document.getElementById('buy-silver');
+  silverBtn.textContent = silver === 0 ? `Unlock Silver ($${silverCost})` : `Buy Silver ($${silverCost})`;
+  silverBtn.disabled = money < silverCost;
 }
 
 function nextBronzeCost() {
-  if (bronze === 1) return 10;
   return Math.ceil(10 * Math.pow(2.5, bronze - 1));
 }
 
 function nextSilverCost() {
-  if (silver === 0) return 50;
-  return Math.ceil(20 * Math.pow(2.5, silver - 1));
+  return Math.ceil(50 * Math.pow(2.5, silver));
 }
 
-function showMessage(text, color = '#0f0') {
+function showMessage(text, color = '#0f8') {
   msg.textContent = text;
   msg.style.color = color;
   msg.classList.add('show');
-  setTimeout(() => msg.classList.remove('show'), 1200);
+  setTimeout(() => msg.classList.remove('show'), 1000);
 }
 
 function createCoin(type) {
@@ -165,74 +244,87 @@ function createCoin(type) {
       <div class="side tails">☠</div>
     </div>
   `;
+  coin.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    flipThisCoin(coin);
+  });
+  coin.addEventListener('click', (e) => {
+    e.preventDefault();
+    flipThisCoin(coin);
+  });
   return coin;
 }
 
+function addCoin(type) {
+  const coin = createCoin(type);
+  container.appendChild(coin);
+}
+
 function renderCoins() {
-  container.innerHTML = '';
+  // Only on init, add all
   for (let i = 0; i < bronze; i++) {
-    const c = createCoin('bronze');
-    container.appendChild(c);
+    addCoin('bronze');
   }
   for (let i = 0; i < silver; i++) {
-    const c = createCoin('silver');
-    container.appendChild(c);
+    addCoin('silver');
   }
 }
 
-function flipAll() {
-  const allCoins = document.querySelectorAll('.coin');
-  if (allCoins.length === 0) return;
+const ANIM_DURATION = 1200;
+function flipThisCoin(coin) {
+  if (coin.classList.contains('animating')) return;
 
-  let won = 0;
-  let rewardTotal = 0;
+  const isSilver = coin.classList.contains('silver');
+  const reward = isSilver ? 5 : 1;
+  const isHeads = Math.random() < 0.5;
 
-  allCoins.forEach(coin => {
-    coin.classList.add('flipping');
-    const isHeads = Math.random() < 0.5;
-    const reward = coin.classList.contains('bronze') ? 1 : 5;
-
-    setTimeout(() => {
-      coin.classList.remove('flipping');
-      if (isHeads) {
-        rewardTotal += reward;
-        won++;
-        streak++;
-      } else {
-        streak = 0;
-      }
-    }, 800);
-  });
+  const coinInner = coin.querySelector('.coin-inner');
+  coin.classList.add('animating', 'jumping', 'flipping');
 
   setTimeout(() => {
-    if (won > 0) {
-      const bonus = streak >= 5 ? 0.2 : 0; // 20% bonus after 5+ streak
-      const total = Math.floor(rewardTotal * (1 + bonus));
-      money += total;
-      showMessage(`+$${total}${bonus > 0 ? ' (streak bonus!)' : ''}`, '#0f8');
-      save();
-      updateUI();
+    coin.classList.remove('jumping', 'flipping');
+    coinInner.style.transform = `rotateY(${isHeads ? '0deg' : '180deg'})`;
+
+    if (isHeads) {
+      const multi = streak >= 4 ? 1.2 : 1;
+      const earned = Math.floor(reward * multi);
+      money += earned;
+      streak++;
+      showMessage(`+$${earned}${multi > 1 ? ' 🔥' : ''}`, '#4caf50');
+      coin.classList.add('win');
+      setTimeout(() => coin.classList.remove('win'), 800);
     } else {
-      showMessage('All tails...', '#f44');
+      streak = 0;
+      showMessage('💀', '#f44336');
+      coin.classList.add('lose');
+      setTimeout(() => coin.classList.remove('lose'), 400);
     }
-  }, 900);
+
+    coin.classList.remove('animating');
+    save();
+    updateUI();
+  }, ANIM_DURATION);
 }
 
-// Events
-document.addEventListener('touchstart', e => {
-  e.preventDefault();
-  flipAll();
-}, { passive: false });
+document.getElementById('flip-all').onclick = () => {
+  const readyCoins = container.querySelectorAll('.coin:not(.animating)');
+  if (readyCoins.length === 0) {
+    showMessage('No coins ready!', '#ff9800');
+    return;
+  }
+  readyCoins.forEach(flipThisCoin);
+};
 
 document.getElementById('buy-bronze').onclick = () => {
   const cost = nextBronzeCost();
   if (money >= cost) {
     money -= cost;
     bronze++;
-    showMessage(`Bought bronze coin!`, '#ffeb3b');
+    addCoin('bronze');
+    showMessage('🪙 Bronze!', '#ff9800');
     save();
     updateUI();
-    renderCoins();
   }
 };
 
@@ -241,10 +333,10 @@ document.getElementById('buy-silver').onclick = () => {
   if (money >= cost) {
     money -= cost;
     silver++;
-    showMessage(`Bought silver coin!`, '#e0e0e0');
+    addCoin('silver');
+    showMessage('⭐ Silver!', '#c0c0c0');
     save();
     updateUI();
-    renderCoins();
   }
 };
 
