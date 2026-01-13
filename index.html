@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Coin Flip - Get Rich Slowly</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #eee;
+      height: 100vh;
+      overflow: hidden;
+      touch-action: manipulation;
+      user-select: none;
+    }
+    header {
+      padding: 12px;
+      background: #1a1a2e;
+      text-align: center;
+      border-bottom: 1px solid #444;
+    }
+    h1 { margin: 8px; font-size: 1.5rem; }
+    #stats {
+      font-size: 1.1rem;
+      margin: 8px 0;
+    }
+    #coins-container {
+      padding: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      height: calc(100vh - 140px);
+      overflow-y: auto;
+    }
+    .coin {
+      width: 90px;
+      height: 90px;
+      position: relative;
+      perspective: 1000px;
+      cursor: pointer;
+    }
+    .coin-inner {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      transform-style: preserve-3d;
+      transition: transform 0.7s;
+    }
+    .coin.flipping .coin-inner {
+      transform: rotateY(1080deg);
+    }
+    .side {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    }
+    .heads { background: linear-gradient(145deg, #ffd700, #d4a017); color: #000; }
+    .tails { background: linear-gradient(145deg, #555, #333); color: #fff; transform: rotateY(180deg); }
+    .bronze .heads { background: linear-gradient(145deg, #cd7f32, #a55d1a); }
+    .silver .heads { background: linear-gradient(145deg, #c0c0c0, #8a8a8a); }
+    button {
+      padding: 12px 20px;
+      margin: 6px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background: #6200ea;
+      color: white;
+      font-weight: bold;
+    }
+    button:disabled { background: #444; }
+    #message {
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.5rem;
+      font-weight: bold;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s;
+      text-shadow: 0 0 10px #000;
+    }
+    #message.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Coin Flip</h1>
+  <div id="stats">$<span id="money">0</span>  •  Bronze: <span id="bronze">1</span>  •  Silver: <span id="silver">0</span></div>
+  <div>
+    <button id="buy-bronze">Buy Bronze</button>
+    <button id="buy-silver">Buy Silver</button>
+  </div>
+</header>
+
+<div id="coins-container"></div>
+
+<div id="message"></div>
+
+<script>
+// ──────────────────────────────────────────────
+let money = Number(localStorage.getItem('flipMoney')) || 0;
+let bronze = Number(localStorage.getItem('flipBronze')) || 1;
+let silver = Number(localStorage.getItem('flipSilver')) || 0;
+let streak = 0;
+
+const moneyEl = document.getElementById('money');
+const bronzeEl = document.getElementById('bronze');
+const silverEl = document.getElementById('silver');
+const container = document.getElementById('coins-container');
+const msg = document.getElementById('message');
+
+function save() {
+  localStorage.setItem('flipMoney', money);
+  localStorage.setItem('flipBronze', bronze);
+  localStorage.setItem('flipSilver', silver);
+}
+
+function updateUI() {
+  moneyEl.textContent = Math.floor(money);
+  bronzeEl.textContent = bronze;
+  silverEl.textContent = silver;
+  document.getElementById('buy-bronze').textContent = `Buy Bronze ($${nextBronzeCost()})`;
+  document.getElementById('buy-silver').textContent = silver === 0 ? `Unlock Silver ($${nextSilverCost()})` : `Buy Silver ($${nextSilverCost()})`;
+  document.getElementById('buy-bronze').disabled = money < nextBronzeCost();
+  document.getElementById('buy-silver').disabled = money < nextSilverCost();
+}
+
+function nextBronzeCost() {
+  if (bronze === 1) return 10;
+  return Math.ceil(10 * Math.pow(2.5, bronze - 1));
+}
+
+function nextSilverCost() {
+  if (silver === 0) return 50;
+  return Math.ceil(20 * Math.pow(2.5, silver - 1));
+}
+
+function showMessage(text, color = '#0f0') {
+  msg.textContent = text;
+  msg.style.color = color;
+  msg.classList.add('show');
+  setTimeout(() => msg.classList.remove('show'), 1200);
+}
+
+function createCoin(type) {
+  const coin = document.createElement('div');
+  coin.className = `coin ${type}`;
+  coin.innerHTML = `
+    <div class="coin-inner">
+      <div class="side heads">$</div>
+      <div class="side tails">☠</div>
+    </div>
+  `;
+  return coin;
+}
+
+function renderCoins() {
+  container.innerHTML = '';
+  for (let i = 0; i < bronze; i++) {
+    const c = createCoin('bronze');
+    container.appendChild(c);
+  }
+  for (let i = 0; i < silver; i++) {
+    const c = createCoin('silver');
+    container.appendChild(c);
+  }
+}
+
+function flipAll() {
+  const allCoins = document.querySelectorAll('.coin');
+  if (allCoins.length === 0) return;
+
+  let won = 0;
+  let rewardTotal = 0;
+
+  allCoins.forEach(coin => {
+    coin.classList.add('flipping');
+    const isHeads = Math.random() < 0.5;
+    const reward = coin.classList.contains('bronze') ? 1 : 5;
+
+    setTimeout(() => {
+      coin.classList.remove('flipping');
+      if (isHeads) {
+        rewardTotal += reward;
+        won++;
+        streak++;
+      } else {
+        streak = 0;
+      }
+    }, 800);
+  });
+
+  setTimeout(() => {
+    if (won > 0) {
+      const bonus = streak >= 5 ? 0.2 : 0; // 20% bonus after 5+ streak
+      const total = Math.floor(rewardTotal * (1 + bonus));
+      money += total;
+      showMessage(`+$${total}${bonus > 0 ? ' (streak bonus!)' : ''}`, '#0f8');
+      save();
+      updateUI();
+    } else {
+      showMessage('All tails...', '#f44');
+    }
+  }, 900);
+}
+
+// Events
+document.addEventListener('touchstart', e => {
+  e.preventDefault();
+  flipAll();
+}, { passive: false });
+
+document.getElementById('buy-bronze').onclick = () => {
+  const cost = nextBronzeCost();
+  if (money >= cost) {
+    money -= cost;
+    bronze++;
+    showMessage(`Bought bronze coin!`, '#ffeb3b');
+    save();
+    updateUI();
+    renderCoins();
+  }
+};
+
+document.getElementById('buy-silver').onclick = () => {
+  const cost = nextSilverCost();
+  if (money >= cost) {
+    money -= cost;
+    silver++;
+    showMessage(`Bought silver coin!`, '#e0e0e0');
+    save();
+    updateUI();
+    renderCoins();
+  }
+};
+
+// Init
+updateUI();
+renderCoins();
+</script>
+</body>
+</html>
