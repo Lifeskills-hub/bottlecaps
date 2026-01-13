@@ -1,3 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Coin Flip - Get Rich Slowly</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #eee;
+      height: 100vh;
+      overflow: hidden;
+      touch-action: manipulation;
+      user-select: none;
+    }
+    header {
+      padding: 12px;
+      background: #1a1a2e;
+      text-align: center;
+      border-bottom: 1px solid #444;
+    }
+    h1 { margin: 8px 0 4px 0; font-size: 1.5rem; }
+    #stats {
+      font-size: 1.1rem;
+      margin: 4px 0 12px 0;
+    }
+    #stats span { color: #ffd700; }
+    #buy-row {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 10px 16px;
+      margin: 2px;
+      font-size: 0.95rem;
+      border: none;
+      border-radius: 8px;
+      background: #6200ea;
+      color: white;
+      font-weight: bold;
+    }
+    button:disabled { background: #444; opacity: 0.6; }
+    #flip-all {
+      padding: 14px 28px !important;
+      font-size: 1.1rem !important;
+      background: #00d4ff !important;
+      margin: 8px auto;
+      display: block;
+      width: 90%;
+      max-width: 300px;
+    }
+    #coins-container {
+      position: relative;
+      height: calc(100vh - 220px);
+      overflow: hidden;
+      background: radial-gradient(circle at center, #222 0%, #111 100%);
+    }
+    .coin {
+      position: absolute;
+      width: 70px;
+      height: 70px;
+      perspective: 1000px;
+      cursor: pointer;
+      will-change: transform, left, top;
+    }
+    .coin-inner {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      transform-style: preserve-3d;
+      transition: transform 0.15s linear;
+    }
+    .side {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.7);
+      border: 2px solid #444;
+    }
+    .heads { background: linear-gradient(145deg, #ffd700, #d4a017); color: #000; }
+    .tails { background: linear-gradient(145deg, #555, #333); color: #fff; transform: rotateY(180deg); }
+    .bronze .heads { background: linear-gradient(145deg, #cd7f32, #b8860b); }
+    .bronze .tails { background: linear-gradient(145deg, #8b4513, #654321); }
+    .silver .heads { background: linear-gradient(145deg, #c0c0c0, #a9a9a9); }
+    .silver .tails { background: linear-gradient(145deg, #696969, #505050); }
+    .animating { pointer-events: none; }
+    .coin.win { animation: glow 0.8s ease-in-out infinite alternate; }
+    @keyframes glow { from { box-shadow: 0 0 12px #4caf50; } to { box-shadow: 0 0 30px #8bc34a; } }
+    .coin.lose { animation: shake 0.4s; }
+    @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-4px);} 75%{transform:translateX(4px);} }
+    #message {
+      position: fixed;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3rem;
+      font-weight: bold;
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.4s;
+      text-shadow: 0 0 20px #000;
+      z-index: 10;
+    }
+    #message.show { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🪙 Coin Flip</h1>
+  <div id="stats">
+    $<span id="money">0</span> • Bronze: <span id="bronze-count">1</span> • Silver: <span id="silver-count">0</span> • Streak: <span id="streak-count">0</span> • Taps: <span id="tap-count">0</span>
+  </div>
+  <div id="buy-row">
+    <button id="buy-bronze">Buy Bronze ($10)</button>
+    <button id="buy-silver">Unlock Silver ($50)</button>
+  </div>
+  <button id="flip-all">🚀 Flip All ($1)</button>
+</header>
+
+<div id="coins-container"></div>
+
+<div id="message"></div>
+
+<script>
 // ──────────────────────────────────────────────
 let money = Number(localStorage.getItem('flipMoney')) || 0;
 let bronze = Number(localStorage.getItem('flipBronze')) || 1;
@@ -91,7 +226,7 @@ function createCoinObj(type) {
     elem, x: 0, y: 0, vx: 0, vy: 0, rotating: 0,
     isAnimating: false, isHeads: false,
     reward: type === 'silver' ? 5 : 1,
-    bounced: false  // for small bounce effect
+    bounced: false
   };
   elem._obj = obj;
 
@@ -156,8 +291,8 @@ function landCoin(coin) {
 function flipThisCoin(coin) {
   if (coin.isAnimating) return;
   coin.isHeads = Math.random() < 0.5;
-  coin.vx = (Math.random() - 0.5) * 1000;           // wider horizontal range
-  coin.vy = - (800 + Math.random() * 300);          // strong upward jump, varied height
+  coin.vx = (Math.random() - 0.5) * 1000;
+  coin.vy = - (800 + Math.random() * 300);
   coin.rotating = 0;
   coin.bounced = false;
   coin.isAnimating = true;
@@ -165,11 +300,11 @@ function flipThisCoin(coin) {
   startPhysics();
 }
 
-const GRAVITY = 1600;      // bit lower → longer jumps
-const SPIN_SPEED = 2160;   // faster spin = more flip feel
+const GRAVITY = 1600;
+const SPIN_SPEED = 2160;
 const GROUND_FRICTION = 0.84;
 const WALL_BOUNCE = 0.72;
-const BOUNCE_FACTOR = 0.38;  // small bounce on first hit
+const BOUNCE_FACTOR = 0.38;
 
 function updatePhysics(dt) {
   let anyActive = false;
@@ -184,7 +319,7 @@ function updatePhysics(dt) {
     }
   });
 
-  // Basic collision (push + velocity exchange)
+  // Basic collision
   for (let i = 0; i < coins.length; i++) {
     for (let j = i+1; j < coins.length; j++) {
       const a = coins[i], b = coins[j];
@@ -211,7 +346,7 @@ function updatePhysics(dt) {
   // Bounds & ground
   coins.forEach(coin => {
     if (coin.isAnimating) {
-      // Left / right wall
+      // Walls
       if (coin.x < 0) {
         coin.x = 0;
         coin.vx = -coin.vx * WALL_BOUNCE;
@@ -229,7 +364,6 @@ function updatePhysics(dt) {
       if (coin.y >= groundY) {
         coin.y = groundY;
         if (!coin.bounced && Math.abs(coin.vy) > 300) {
-          // Small bounce on hard landing
           coin.vy = -coin.vy * BOUNCE_FACTOR;
           coin.bounced = true;
         } else {
@@ -269,7 +403,38 @@ function startPhysics() {
   }
 }
 
-// Buy / Flip-all handlers remain the same as before...
+document.getElementById('flip-all').onclick = () => {
+  if (flipAllBtn.disabled) return;
+  money -= FLIP_ALL_COST;
+  coins.filter(c => !c.isAnimating).forEach(flipThisCoin);
+  showMessage('Flipping all! 💥', '#00d4ff');
+  save();
+  updateUI();
+};
+
+document.getElementById('buy-bronze').onclick = () => {
+  const cost = Math.ceil(10 * Math.pow(2.5, bronze - 1));
+  if (money >= cost) {
+    money -= cost;
+    bronze++;
+    addCoin('bronze');
+    showMessage('🪙 Bronze added!', '#ff9800');
+    save();
+    updateUI();
+  }
+};
+
+document.getElementById('buy-silver').onclick = () => {
+  const cost = Math.ceil(50 * Math.pow(2.5, silver));
+  if (money >= cost) {
+    money -= cost;
+    silver++;
+    addCoin('silver');
+    showMessage('⭐ Silver added!', '#c0c0c0');
+    save();
+    updateUI();
+  }
+};
 
 window.addEventListener('resize', updateContDims);
 
@@ -277,3 +442,6 @@ window.addEventListener('resize', updateContDims);
 updateContDims();
 renderCoins();
 updateUI();
+</script>
+</body>
+</html>
