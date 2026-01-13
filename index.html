@@ -115,13 +115,27 @@
       animation: jump 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
     }
     @keyframes jump {
-      0% { transform: translateY(0) translateX(0) scale(1); }
-      15% { transform: translateY(-50px) translateX(var(--dx-start)) scale(1.12); }
-      40% { transform: translateY(-110px) translateX(var(--dx-peak)) scale(1.08); }
-      65% { transform: translateY(-45px) translateX(var(--dx-mid)) scale(1.03); }
-      85% { transform: translateY(5px) translateX(var(--dx-end)) scale(0.98); }
-      95% { transform: translateY(-2px) translateX(0) scale(0.99); }
-      100% { transform: translateY(0) translateX(0) scale(1); }
+      0% {
+        transform: translateX(var(--start-x)) translateY(var(--start-y)) scale(1);
+      }
+      15% {
+        transform: translateX(calc(var(--start-x) + 0.15 * var(--delta-x))) translateY(calc(var(--start-y) + 0.15 * var(--delta-y) - 50px)) scale(1.12);
+      }
+      40% {
+        transform: translateX(calc(var(--start-x) + 0.4 * var(--delta-x))) translateY(calc(var(--start-y) + 0.4 * var(--delta-y) - 110px)) scale(1.08);
+      }
+      65% {
+        transform: translateX(calc(var(--start-x) + 0.65 * var(--delta-x))) translateY(calc(var(--start-y) + 0.65 * var(--delta-y) - 45px)) scale(1.03);
+      }
+      85% {
+        transform: translateX(calc(var(--start-x) + 0.85 * var(--delta-x))) translateY(calc(var(--start-y) + 0.85 * var(--delta-y) + 5px)) scale(0.98);
+      }
+      95% {
+        transform: translateX(calc(var(--start-x) + 0.95 * var(--delta-x))) translateY(calc(var(--start-y) + 0.95 * var(--delta-y) - 2px)) scale(0.99);
+      }
+      100% {
+        transform: translateX(calc(var(--start-x) + var(--delta-x))) translateY(calc(var(--start-y) + var(--delta-y))) scale(1);
+      }
     }
     .coin.flipping .coin-inner {
       animation: spin 1.2s linear both;
@@ -250,6 +264,7 @@ function createCoin(type) {
       <div class="side tails">☠</div>
     </div>
   `;
+  coin.style.transform = 'translateX(0px) translateY(0px)';
   coin.addEventListener('touchstart', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -285,15 +300,31 @@ function flipThisCoin(coin) {
   const reward = isSilver ? 5 : 1;
   const isHeads = Math.random() < 0.5;
 
-  // Random horizontal deltas for "jump around" – physics-like projectile
-  const dxStart = (Math.random() - 0.5) * 60 + 'px'; // -30 to +30px
-  const dxPeak = (Math.random() - 0.5) * 100 + 'px'; // Wider at peak
-  const dxMid = (Math.random() - 0.5) * 80 + 'px';
-  const dxEnd = (Math.random() - 0.5) * 40 + 'px'; // Taper back
-  coin.style.setProperty('--dx-start', dxStart);
-  coin.style.setProperty('--dx-peak', dxPeak);
-  coin.style.setProperty('--dx-mid', dxMid);
-  coin.style.setProperty('--dx-end', dxEnd);
+  // Get current transform
+  const transform = coin.style.transform || 'translateX(0px) translateY(0px)';
+  const matchX = transform.match(/translateX\(([^\)]+)\)/);
+  const matchY = transform.match(/translateY\(([^\)]+)\)/);
+  let currentX = matchX ? parseFloat(matchX[1]) : 0;
+  let currentY = matchY ? parseFloat(matchY[1]) : 0;
+
+  // Calculate deltas
+  let deltaX = (Math.random() - 0.5) * 100; // Horizontal jump distance
+  let deltaY = (Math.random() - 0.5) * 60; // Vertical jump distance, smaller to keep on screen
+
+  // Clamp to container bounds
+  const contRect = container.getBoundingClientRect();
+  let proposedX = currentX + deltaX;
+  let proposedY = currentY + deltaY;
+  proposedX = Math.max(0, Math.min(proposedX, contRect.width - 70));
+  proposedY = Math.max(0, Math.min(proposedY, contRect.height - 70));
+  deltaX = proposedX - currentX;
+  deltaY = proposedY - currentY;
+
+  // Set variables for animation
+  coin.style.setProperty('--start-x', `${currentX}px`);
+  coin.style.setProperty('--start-y', `${currentY}px`);
+  coin.style.setProperty('--delta-x', `${deltaX}px`);
+  coin.style.setProperty('--delta-y', `${deltaY}px`);
 
   const coinInner = coin.querySelector('.coin-inner');
   coin.classList.add('animating', 'jumping', 'flipping');
@@ -301,6 +332,7 @@ function flipThisCoin(coin) {
   setTimeout(() => {
     coin.classList.remove('jumping', 'flipping');
     coinInner.style.transform = `rotateY(${isHeads ? '0deg' : '180deg'})`;
+    coin.style.transform = `translateX(${proposedX}px) translateY(${proposedY}px)`;
 
     if (isHeads) {
       const multi = streak >= 4 ? 1.2 : 1;
