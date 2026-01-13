@@ -61,23 +61,23 @@
       height: 68px;
       border-radius: 50%;
       background: #cd7f32;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.7), inset 0 2px 6px rgba(255,255,255,0.3);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.7), inset 0 2px 6px rgba(255,255,255,0.25);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 2.4rem;
       font-weight: bold;
       color: #000;
-      transition: transform 0.08s linear;
+      transition: box-shadow 0.15s;
       will-change: transform;
       z-index: 1;
     }
     .coin.silver {
       background: #c0c0c0;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.7), inset 0 2px 8px rgba(255,255,255,0.5);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.7), inset 0 3px 8px rgba(255,255,255,0.4);
     }
     .coin.in-air {
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      box-shadow: 0 25px 50px rgba(0,0,0,0.65);
       z-index: 10;
     }
     .coin::after {
@@ -85,40 +85,39 @@
       position: absolute;
       font-size: 2.4rem;
       opacity: 0;
-      transition: opacity 0.3s;
+      transition: opacity 0.4s;
     }
     .coin.tails::after { opacity: 1; }
     .coin.heads::after { content: "$"; opacity: 1; }
     .coin.animating { pointer-events: none; }
-    .coin.win  { animation: win-glow 1.2s ease-in-out 2; }
+    .coin.win  { animation: win-glow 1.4s ease-in-out 2; }
     .coin.lose { animation: lose-shake 0.5s; }
     @keyframes win-glow {
-      0%,100% { box-shadow: 0 3px 10px #4caf50; }
-      50%     { box-shadow: 0 10px 30px #8bc34a, 0 0 40px #8bc34a; }
+      0%,100% { box-shadow: 0 4px 12px #4caf50; }
+      50%     { box-shadow: 0 15px 45px #8bc34a, 0 0 60px #8bc34a; }
     }
     @keyframes lose-shake {
       0%,100% { transform: translateX(0); }
-      20%     { transform: translateX(-6px); }
-      40%     { transform: translateX(6px); }
-      60%     { transform: translateX(-4px); }
-      80%     { transform: translateX(4px); }
+      25%     { transform: translateX(-7px); }
+      50%     { transform: translateX(7px); }
+      75%     { transform: translateX(-5px); }
     }
     #message {
       position: fixed;
       top: 40%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 3.5rem;
+      font-size: 3.8rem;
       font-weight: bold;
       pointer-events: none;
       opacity: 0;
       transition: all 0.5s;
-      text-shadow: 0 0 25px #000;
+      text-shadow: 0 0 30px #000;
       z-index: 20;
     }
     #message.show {
       opacity: 1;
-      transform: translate(-50%, -50%) scale(1.2);
+      transform: translate(-50%, -50%) scale(1.25);
     }
   </style>
 </head>
@@ -183,7 +182,7 @@ function show(text, color = '#0f8') {
   msg.textContent = text;
   msg.style.color = color;
   msg.classList.add('show');
-  setTimeout(() => msg.classList.remove('show'), 1400);
+  setTimeout(() => msg.classList.remove('show'), 1600);
 }
 
 function createCoin(type = 'bronze') {
@@ -209,16 +208,14 @@ function createCoin(type = 'bronze') {
 function addCoin(type) {
   const coin = createCoin(type);
   container.appendChild(coin);
-  setTimeout(() => randomizePosition(coin), 50);
+  setTimeout(() => randomizePosition(coin), 80);
 }
 
 function randomizePosition(coin) {
-  const w = container.clientWidth - 80;
-  const h = container.clientHeight - 80;
-  let x = 40 + Math.random() * w;
-  let y = 40 + Math.random() * h;
-
-  // avoid too much overlap when adding
+  const w = container.clientWidth - 100;
+  const h = container.clientHeight - 100;
+  let x = 50 + Math.random() * w;
+  let y = 50 + Math.random() * h;
   coin.style.left = x + 'px';
   coin.style.top  = y + 'px';
 }
@@ -227,21 +224,24 @@ function jumpCoin(coin) {
   if (coin.classList.contains('animating')) return;
   coin.classList.add('animating', 'in-air');
 
+  // Random direction & strength
   const angle = Math.random() * Math.PI * 2;
-  const distance = 60 + Math.random() * 140;
-  const dx = Math.cos(angle) * distance;
-  const dy = Math.sin(angle) * distance;
+  const horiz = 80 + Math.random() * 180;     // sideways distance
+  const upHeight = 120 + Math.random() * 100; // peak height (bigger = more visible jump)
 
-  const duration = 900 + Math.random() * 400; // 0.9–1.3s
+  const dx = Math.cos(angle) * horiz;
+  const dy = Math.sin(angle) * horiz;
+
+  const duration = 1000 + Math.random() * 400; // 1.0–1.4 seconds
 
   coin.animate([
-    { transform: 'scale(1) translate(0,0)', offset: 0 },
-    { transform: `scale(1.35) translate(${dx}px, ${dy - 90}px)`, offset: 0.4 },
-    { transform: `scale(1.35) translate(${dx}px, ${dy - 90}px)`, offset: 0.45 },
-    { transform: `scale(1) translate(${dx}px, ${dy}px)`, offset: 1 }
+    { transform: 'scale(1) translate(0px, 0px)', offset: 0, easing: 'ease-out' },
+    { transform: `scale(1.4) translate(${dx * 0.4}px, ${-upHeight}px)`, offset: 0.35 },
+    { transform: `scale(1.35) translate(${dx * 0.7}px, ${-upHeight * 0.6}px)`, offset: 0.5 },
+    { transform: `scale(1.25) translate(${dx}px, ${-upHeight * 0.15}px)`, offset: 0.75 },
+    { transform: `scale(1) translate(${dx}px, ${dy}px)`, offset: 1, easing: 'ease-in' }
   ], {
     duration: duration,
-    easing: 'ease-in-out',
     fill: 'forwards'
   }).onfinish = () => {
     coin.classList.remove('in-air');
@@ -259,12 +259,12 @@ function jumpCoin(coin) {
       streak++;
       show(`+$${got}${bonus > 1 ? ' 🔥' : ''}`, '#4caf50');
       coin.classList.add('win');
-      setTimeout(() => coin.classList.remove('win'), 2400);
+      setTimeout(() => coin.classList.remove('win'), 2800);
     } else {
       streak = 0;
       show('💀', '#f44336');
       coin.classList.add('lose');
-      setTimeout(() => coin.classList.remove('lose'), 800);
+      setTimeout(() => coin.classList.remove('lose'), 1000);
     }
 
     save();
