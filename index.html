@@ -3,56 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Royal Casino - Cronos Live</title>
+    <title>Royal Casino - Virtual Gold</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        * { 
-            margin: 0; padding: 0; box-sizing: border-box; 
-            font-family: 'Georgia', serif; 
-            -webkit-tap-highlight-color: transparent; 
-            touch-action: manipulation;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: #0a0a0a; height: 100vh; display: flex; justify-content: center; align-items: center; color: white; overflow: hidden; }
         
-        .game-container { width: 1000px; max-width: 98%; background: #1a1a1a; border-radius: 20px; display: flex; flex-direction: column; border: 4px solid #333; position: relative; }
+        .game-container { width: 1000px; max-width: 98%; background: #1a1a1a; border-radius: 20px; display: flex; flex-direction: column; border: 4px solid #333; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
 
-        header { padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to bottom, #222, #111); border-bottom: 3px solid #d4af37; }
+        header { padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; background: #111; border-bottom: 3px solid #d4af37; }
 
-        .money-display { font-size: 22px; color: #d4af37; font-weight: bold; }
+        .money-display { font-size: 28px; color: #ffd700; font-weight: bold; text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
+        .money-display small { font-size: 14px; color: #888; margin-left: 5px; }
 
-        #connect-btn { background: #002d72; color: white; border: 1px solid #0056e0; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
+        #connect-btn { background: #002d72; color: white; border: none; padding: 10px 20px; border-radius: 50px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 12px; }
+        #connect-btn:hover { background: #0044ab; transform: scale(1.05); }
 
-        #wallet-addr { font-size: 12px; color: #888; display: none; }
+        .table-top { position: relative; width: 100%; height: 50vh; background: #076324; background-image: radial-gradient(circle at center, #0a8030 0%, #064d1c 100%); border: 15px solid #3d2b1f; box-shadow: inset 0 0 100px rgba(0,0,0,0.8); overflow: hidden; }
 
-        .table-top { position: relative; width: 100%; height: 50vh; background: #076324; background-image: radial-gradient(circle at center, #0a8030 0%, #076324 100%); border: 12px solid #3d2b1f; box-shadow: inset 0 0 100px rgba(0,0,0,0.7); overflow: hidden; }
-
-        /* --- WAITING SCREEN --- */
-        #waiting-screen {
-            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 1000; flex-direction: column;
-            justify-content: center; align-items: center; text-align: center; border-radius: 16px;
-        }
-        .spinner { width: 50px; height: 50px; border: 5px solid #333; border-top: 5px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        #waiting-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; text-align: center; border-radius: 16px; }
+        .spinner { width: 60px; height: 60px; border: 6px solid #333; border-top: 6px solid #ffd700; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .coin { position: absolute; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: bold; transition: all 0.5s; z-index: 10; user-select: none; box-shadow: 0 4px 6px rgba(0,0,0,0.5); cursor: pointer; }
-        .coin.flipping { z-index: 100; animation: coin-spin 0.5s linear infinite; transform: scale(2.2); pointer-events: none; }
-        @keyframes coin-spin { 0% { transform: scale(2.2) rotateX(0deg); } 100% { transform: scale(2.2) rotateX(360deg); } }
+        .coin { position: absolute; width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 22px; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 10; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.4); font-weight: bold; }
+        .coin.flipping { animation: coin-spin 0.5s linear infinite; transform: scale(2.0); z-index: 100; pointer-events: none; }
+        @keyframes coin-spin { 0% { transform: scale(2.0) rotateY(0deg); } 100% { transform: scale(2.0) rotateY(360deg); } }
 
-        .coin.copper { background: radial-gradient(#b87333, #8b4513); border: 2px solid #5d2906; color: #fff; }
-        .coin.silver { background: radial-gradient(#c0c0c0, #7a7a7a); border: 2px solid #444; color: #333; }
+        .coin.copper { background: radial-gradient(#cd7f32, #8b4513); border: 2px solid #5d2906; color: #ffd; }
+        .coin.silver { background: radial-gradient(#e0e0e0, #7a7a7a); border: 2px solid #444; color: #222; }
         .coin.gold { background: radial-gradient(#ffd700, #b8860b); border: 2px solid #8a6d00; color: #4d3d00; }
 
-        .controls-row { display: flex; gap: 8px; padding: 10px; background: #111; }
-        .upgrade-group { flex: 1; background: #1a1a1a; padding: 6px; border-radius: 8px; display: flex; flex-direction: column; gap: 4px; border: 1px solid #333; }
-        .upgrade-group h4 { font-size: 10px; color: #d4af37; text-align: center; }
+        .controls-row { display: flex; gap: 12px; padding: 15px; background: #111; }
+        .upgrade-group { flex: 1; background: #1c1c1c; padding: 12px; border-radius: 12px; border: 1px solid #333; text-align: center; }
+        .upgrade-group h4 { font-size: 11px; color: #d4af37; margin-bottom: 8px; letter-spacing: 1px; text-transform: uppercase; }
 
-        button.game-btn { padding: 8px 2px; font-size: 10px; font-weight: bold; border: 1px solid #d4af37; border-radius: 4px; background: #222; color: #d4af37; cursor: pointer; }
-        button:disabled { border-color: #444; color: #555; cursor: default; }
-        .lvl-text { font-size: 10px; color: #888; text-align: center; }
-        .floating-val { position: absolute; color: #fff; font-weight: bold; pointer-events: none; z-index: 200; text-shadow: 0 0 5px #000; animation: float-up 0.8s ease-out forwards; }
-        @keyframes float-up { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-70px); } }
+        button.game-btn { width: 100%; padding: 10px 5px; font-size: 11px; font-weight: bold; border: 1px solid #d4af37; border-radius: 6px; background: #222; color: #d4af37; cursor: pointer; margin-bottom: 5px; transition: 0.2s; }
+        button.game-btn:hover:not(:disabled) { background: #d4af37; color: black; }
+        button:disabled { opacity: 0.2; cursor: not-allowed; }
+        
+        .lvl-text { font-size: 11px; color: #777; margin-top: 5px; }
+        .floating-val { position: absolute; color: #ffd700; font-weight: bold; pointer-events: none; z-index: 200; text-shadow: 0 2px 4px #000; animation: float-up 0.8s ease-out forwards; }
+        @keyframes float-up { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-80px); } }
     </style>
 </head>
 <body>
@@ -60,17 +51,19 @@
 <div class="game-container">
     <div id="waiting-screen">
         <div class="spinner"></div>
-        <h2 style="color: #d4af37;">BLOCKCHAIN SYNC</h2>
-        <p style="font-size: 12px; margin-top: 8px;">Waiting for Cronos network confirmation...</p>
+        <h2 style="color: #ffd700;">BLOCKCHAIN CONFIRMING...</h2>
+        <p style="font-size: 14px; color: #888; margin-top: 10px;">Please confirm in your wallet app.</p>
     </div>
 
     <header>
         <div>
-            <h3 style="font-size: 14px; margin-bottom: 4px;">ROYAL TOSS</h3>
+            <h1 style="font-size: 18px; color: #d4af37; letter-spacing: 1px;">ROYAL TOSS</h1>
             <button id="connect-btn">CONNECT WALLET</button>
-            <span id="wallet-addr">0x...</span>
+            <p id="wallet-addr" style="display:none; font-size:10px; color:#555; margin-top:5px;"></p>
         </div>
-        <div class="money-display"><span id="money">0.00</span> CRO</div>
+        <div class="money-display">
+            <span id="money">10.00</span><small>GOLD</small>
+        </div>
     </header>
 
     <div class="table-top" id="table"></div>
@@ -78,41 +71,65 @@
     <div class="controls-row">
         <div class="upgrade-group">
             <h4>COPPER</h4>
-            <button class="game-btn" id="buy-copper">BUY (0.5 CRO)</button>
-            <button class="game-btn" id="up-copper">LVL+ (1.0 CRO)</button>
-            <div class="lvl-text">Qty:<span id="cnt-c">1</span> Val:<span id="val-c">0.1</span></div>
+            <button class="game-btn" id="buy-copper">BUY NEW (2 G)</button>
+            <button class="game-btn" id="up-copper">UPGRADE (5 G)</button>
+            <div class="lvl-text">Value: <span id="val-c">0.1</span> | Qty: <span id="cnt-c">1</span></div>
         </div>
         <div class="upgrade-group">
             <h4>SILVER</h4>
-            <button class="game-btn" id="buy-silver">BUY (5.0 CRO)</button>
-            <button class="game-btn" id="up-silver">LVL+ (10.0 CRO)</button>
-            <div class="lvl-text">Qty:<span id="cnt-s">0</span> Val:<span id="val-s">1.0</span></div>
+            <button class="game-btn" id="buy-silver">BUY NEW (20 G)</button>
+            <button class="game-btn" id="up-silver">UPGRADE (50 G)</button>
+            <div class="lvl-text">Value: <span id="val-s">1.0</span> | Qty: <span id="cnt-s">0</span></div>
         </div>
         <div class="upgrade-group">
             <h4>GOLD</h4>
-            <button class="game-btn" id="buy-gold">BUY (20.0 CRO)</button>
-            <button class="game-btn" id="up-gold">LVL+ (50.0 CRO)</button>
-            <div class="lvl-text">Qty:<span id="cnt-g">0</span> Val:<span id="val-g">5.0</span></div>
+            <button class="game-btn" id="buy-gold">BUY NEW (100 G)</button>
+            <button class="game-btn" id="up-gold">UPGRADE (250 G)</button>
+            <div class="lvl-text">Value: <span id="val-g">5.0</span> | Qty: <span id="cnt-g">0</span></div>
+        </div>
+        <div class="upgrade-group" style="border-color: #002d72; background: #00122e;">
+            <h4 style="color: #4da3ff;">GET GOLD</h4>
+            <button class="game-btn" id="crypto-buy" style="background:#002d72; color:white; border:none;">+1,000 GOLD (1 CRO)</button>
+            <p style="font-size: 9px; color: #4da3ff; margin-top:5px;">Real Cronos Payment</p>
         </div>
     </div>
 </div>
 
 <script>
-    // --- IMPORTANT: REPLACE WITH YOUR 0x ADDRESS ---
-    const DEVELOPER_WALLET = "0x53140cbcC51E9b113C4a30818fE947a1948eB947"; 
+    // --- YOUR DEVELOPER WALLET ---
+    const DEVELOPER_WALLET = "0x53140cbcC51E9b113C4a30818fE947a1948eB947";
 
-    const state = {
-        money: 0,
-        walletConnected: false,
-        copper: { count: 1, val: 0.1, buyCost: 0.5, upCost: 1.0 },
-        silver: { count: 0, val: 1.0, buyCost: 5.0, upCost: 10.0 },
-        gold:   { count: 0, val: 5.0, buyCost: 20.0, upCost: 50.0 }
+    // --- GAME STATE ---
+    let state = {
+        money: 10.00,
+        copper: { count: 1, val: 0.1, buyCost: 2.0, upCost: 5.0 },
+        silver: { count: 0, val: 1.0, buyCost: 20.0, upCost: 50.0 },
+        gold:   { count: 0, val: 5.0, buyCost: 100.0, upCost: 250.0 }
     };
 
-    let provider, signer, address;
+    let provider, signer, address, walletConnected = false;
 
-    const waitingScreen = document.getElementById('waiting-screen');
+    // --- SAVE & LOAD SYSTEM ---
+    function saveGame() {
+        localStorage.setItem('royal_casino_save', JSON.stringify(state));
+    }
 
+    function loadGame() {
+        const saved = localStorage.getItem('royal_casino_save');
+        if (saved) {
+            state = JSON.parse(saved);
+            // Re-create coins based on count
+            document.getElementById('table').innerHTML = '';
+            for(let i=0; i<state.copper.count; i++) createCoin('copper');
+            for(let i=0; i<state.silver.count; i++) createCoin('silver');
+            for(let i=0; i<state.gold.count; i++) createCoin('gold');
+        } else {
+            createCoin('copper'); // Initial coin
+        }
+        updateUI();
+    }
+
+    // --- WALLET LOGIC ---
     async function connectWallet() {
         if (window.ethereum) {
             try {
@@ -120,134 +137,126 @@
                 const accounts = await provider.send("eth_requestAccounts", []);
                 signer = await provider.getSigner();
                 address = accounts[0];
-                state.walletConnected = true;
+                walletConnected = true;
                 document.getElementById('connect-btn').style.display = 'none';
                 document.getElementById('wallet-addr').style.display = 'block';
-                document.getElementById('wallet-addr').textContent = address.slice(0,6) + "..." + address.slice(-4);
-                refreshBalance();
+                document.getElementById('wallet-addr').textContent = address.slice(0,10) + "...";
+                updateUI();
             } catch (err) { console.error(err); }
-        } else { alert("Open this in Crypto.com DeFi Wallet Browser!"); }
+        } else { alert("Open this in the Crypto.com DeFi Wallet DApp Browser!"); }
     }
 
-    async function refreshBalance() {
-        if (!address) return;
-        const balanceWei = await provider.getBalance(address);
-        state.money = parseFloat(ethers.formatEther(balanceWei));
-        updateUI();
-    }
-
-    // --- REAL TRANSACTION LOGIC ---
-    async function processPayment(amount) {
-        if (!state.walletConnected) return false;
+    async function buyGoldWithCrypto() {
+        if (!walletConnected) return alert("Please connect your wallet first!");
         
-        waitingScreen.style.display = 'flex'; // Show loading
-        
+        document.getElementById('waiting-screen').style.display = 'flex';
         try {
             const tx = await signer.sendTransaction({
                 to: DEVELOPER_WALLET,
-                value: ethers.parseEther(amount.toString())
+                value: ethers.parseEther("1.0") // Sending 1 CRO
             });
-            
-            await tx.wait(); // Wait for confirmation
-            waitingScreen.style.display = 'none'; // Hide loading
-            return true;
+            await tx.wait(); // Wait for blockchain confirmation
+            state.money += 1000;
+            saveGame();
+            alert("Success! 1,000 Gold added.");
         } catch (err) {
             console.error(err);
-            waitingScreen.style.display = 'none';
-            alert("Transaction failed or rejected.");
-            return false;
+            alert("Payment failed or was rejected.");
         }
+        document.getElementById('waiting-screen').style.display = 'none';
+        updateUI();
     }
 
+    // --- UI UPDATES ---
     function updateUI() {
         document.getElementById('money').textContent = state.money.toFixed(2);
         ['copper', 'silver', 'gold'].forEach(k => {
             const p = k[0];
+            document.getElementById(`val-${p}`).textContent = state[k].val.toFixed(2);
             document.getElementById(`cnt-${p}`).textContent = state[k].count;
-            document.getElementById(`val-${p}`).textContent = state[k].val.toFixed(1);
-            const canBuy = state.money >= state[k].buyCost && state.walletConnected;
-            const canUp = state.money >= state[k].upCost && state.walletConnected;
-            document.getElementById(`buy-${k}`).disabled = !canBuy;
-            document.getElementById(`up-${k}`).disabled = !canUp;
+            document.getElementById(`buy-${k}`).disabled = state.money < state[k].buyCost;
+            document.getElementById(`up-${k}`).disabled = state.money < state[k].upCost;
         });
+        document.getElementById('crypto-buy').disabled = !walletConnected;
     }
 
+    // --- GAMEPLAY MECHANICS ---
     function createCoin(type) {
+        const table = document.getElementById('table');
         const coin = document.createElement('div');
         coin.className = `coin ${type}`;
         coin.dataset.type = type;
         coin.style.left = `${50 + Math.random() * (table.clientWidth - 100)}px`;
         coin.style.top = `${50 + Math.random() * (table.clientHeight - 100)}px`;
-        coin.textContent = '◈';
-        coin.onpointerdown = (e) => {
-            const curX = parseFloat(coin.style.left);
-            const curY = parseFloat(coin.style.top);
-            checkGroupFlip(curX, curY);
+        coin.textContent = '$';
+        
+        coin.onpointerdown = () => {
+            if (coin.classList.contains('flipping')) return;
+            flip(coin);
         };
         table.appendChild(coin);
-    }
-
-    function checkGroupFlip(tX, tY) {
-        const coins = document.querySelectorAll('.coin');
-        coins.forEach(c => {
-            const cx = parseFloat(c.style.left);
-            const cy = parseFloat(c.style.top);
-            const dist = Math.sqrt((cx-tX)**2 + (cy-tY)**2);
-            if (dist < 60 && !c.classList.contains('flipping')) { flip(c); }
-        });
     }
 
     function flip(coin) {
         coin.classList.add('flipping');
         const type = coin.dataset.type;
-        let nX = Math.max(20, Math.min(table.clientWidth - 60, parseFloat(coin.style.left) + (Math.random() - 0.5) * 300));
-        let nY = Math.max(20, Math.min(table.clientHeight - 60, parseFloat(coin.style.top) + (Math.random() - 0.5) * 300));
-        coin.style.left = `${nX}px`; coin.style.top = `${nY}px`;
+        const table = document.getElementById('table');
+        
+        let nx = Math.max(20, Math.min(table.clientWidth - 70, parseFloat(coin.style.left) + (Math.random()-0.5)*200));
+        let ny = Math.max(20, Math.min(table.clientHeight - 70, parseFloat(coin.style.top) + (Math.random()-0.5)*200));
+        coin.style.left = nx+'px'; coin.style.top = ny+'px';
 
         setTimeout(() => {
             coin.classList.remove('flipping');
-            if (Math.random() > 0.45) {
-                state.money += state[type].val;
-                showFloat(nX, nY, `+${state[type].val} CRO`);
+            if (Math.random() > 0.45) { // Win chance
+                const win = state[type].val;
+                state.money += win;
+                showFloat(nx, ny, `+${win.toFixed(2)}`);
+                saveGame();
             } else {
-                coin.textContent = '💀';
-                setTimeout(() => { coin.textContent = '◈'; }, 800);
+                coin.textContent = '❌';
+                setTimeout(() => coin.textContent = '$', 600);
             }
             updateUI();
         }, 500);
     }
 
-    function showFloat(x, y, text) {
+    function showFloat(x, y, txt) {
         const f = document.createElement('div');
-        f.className = 'floating-val'; f.textContent = text;
-        f.style.left = `${x}px`; f.style.top = `${y}px`;
-        table.appendChild(f);
+        f.className = 'floating-val'; f.textContent = txt;
+        f.style.left = x+'px'; f.style.top = y+'px';
+        document.getElementById('table').appendChild(f);
         setTimeout(() => f.remove(), 800);
     }
 
-    function setupButtons(type) {
-        document.getElementById(`buy-${type}`).onclick = async () => {
-            const success = await processPayment(state[type].buyCost);
-            if (success) {
+    // --- BUTTON BINDING ---
+    function bindUpgrade(type) {
+        document.getElementById(`buy-${type}`).onclick = () => {
+            if (state.money >= state[type].buyCost) {
+                state.money -= state[type].buyCost;
                 state[type].count++;
                 createCoin(type);
-                refreshBalance();
+                updateUI();
+                saveGame();
             }
         };
-        document.getElementById(`up-${type}`).onclick = async () => {
-            const success = await processPayment(state[type].upCost);
-            if (success) {
-                state[type].val *= 1.5;
-                state[type].upCost *= 2;
-                refreshBalance();
+        document.getElementById(`up-${type}`).onclick = () => {
+            if (state.money >= state[type].upCost) {
+                state.money -= state[type].upCost;
+                state[type].val *= 2.2;
+                state[type].upCost *= 2.8;
+                updateUI();
+                saveGame();
             }
         };
     }
 
+    // --- START ---
     document.getElementById('connect-btn').onclick = connectWallet;
-    setupButtons('copper'); setupButtons('silver'); setupButtons('gold');
-    createCoin('copper');
-    updateUI();
+    document.getElementById('crypto-buy').onclick = buyGoldWithCrypto;
+    ['copper', 'silver', 'gold'].forEach(bindUpgrade);
+    
+    loadGame(); // Initialize game data
 </script>
 </body>
 </html>
