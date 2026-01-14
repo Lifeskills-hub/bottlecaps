@@ -10,7 +10,6 @@
             padding: 0; 
             box-sizing: border-box; 
             font-family: 'Georgia', serif; 
-            /* Fix for the blue highlight/square on click */
             -webkit-tap-highlight-color: transparent; 
         }
         
@@ -51,7 +50,6 @@
             text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
         }
 
-        /* --- CASINO TABLE --- */
         .table-top {
             position: relative;
             width: 100%;
@@ -72,7 +70,6 @@
             pointer-events: none;
         }
 
-        /* --- COINS --- */
         .coin {
             position: absolute;
             width: 42px; 
@@ -90,7 +87,6 @@
             z-index: 10;
             user-select: none;
             box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-            /* Removes the blue square outline */
             outline: none; 
         }
 
@@ -110,7 +106,6 @@
         .coin.silver { background: linear-gradient(135deg, #c0c0c0, #7a7a7a); border: 2px solid #444; color: #333; }
         .coin.gold { background: linear-gradient(135deg, #ffd700, #b8860b); border: 2px solid #8a6d00; color: #4d3d00; }
 
-        /* --- UI CONTROLS --- */
         .controls-row {
             display: flex;
             gap: 12px;
@@ -218,10 +213,31 @@
 
     const table = document.getElementById('table');
     const COIN_SIZE = 42;
+    let audioCtx = null;
+
+    // Synthesized Sound Effect
+    function playCoinSound() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.05);
+
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+    }
 
     function updateUI() {
         document.getElementById('money').textContent = Math.floor(state.money).toLocaleString();
-        
         const updateSec = (key, prefix) => {
             document.getElementById(`cnt-${prefix}`).textContent = state[key].count;
             document.getElementById(`val-${prefix}`).textContent = state[key].val;
@@ -230,7 +246,6 @@
             document.getElementById(`buy-${key}`).disabled = state.money < state[key].buyCost;
             document.getElementById(`up-${key}`).disabled = state.money < state[key].upCost;
         };
-
         updateSec('copper', 'c');
         updateSec('silver', 's');
         updateSec('gold', 'g');
@@ -250,11 +265,12 @@
 
     function flip(coin, type) {
         if (coin.classList.contains('flipping')) return;
+        
+        playCoinSound(); // Trigger sound
         coin.classList.add('flipping');
 
         const currentX = parseFloat(coin.style.left);
         const currentY = parseFloat(coin.style.top);
-        
         let newX = currentX + (Math.random() - 0.5) * 350;
         let newY = currentY + (Math.random() - 0.5) * 350;
 
@@ -266,14 +282,13 @@
 
         setTimeout(() => {
             coin.classList.remove('flipping');
-            if (Math.random() > 0.45) { // Win chance
+            if (Math.random() > 0.45) {
                 const win = state[type].val;
                 state.money += win;
                 coin.textContent = '$';
                 showFloat(newX, newY, `+$${win}`);
             } else {
                 coin.textContent = '💀';
-                // Briefly show skull, then back to $ for the next flip
                 setTimeout(() => { coin.textContent = '$'; }, 800);
             }
             updateUI();
