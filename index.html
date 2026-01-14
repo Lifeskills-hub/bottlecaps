@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Royal Casino - Cronos Integration</title>
+    <title>Royal Casino - Testnet Mode</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
         * { 
@@ -162,8 +162,8 @@
 <div class="game-container">
     <div id="waiting-screen">
         <div class="spinner"></div>
-        <h2 style="color: #d4af37;">CONFIRMING TRANSACTION</h2>
-        <p style="font-size: 12px; color: #888; margin-top: 10px;">Waiting for Cronos network...</p>
+        <h2 style="color: #d4af37;">TESTNET TRANSACTION</h2>
+        <p id="wait-msg" style="font-size: 12px; color: #888; margin-top: 10px;">Waiting for 0.1 TCRO...</p>
     </div>
 
     <header>
@@ -200,19 +200,20 @@
         </div>
 
         <div class="upgrade-group" style="border-color: #002d72; background: #00122e;">
-            <h4 style="color: #4da3ff;">CRYPTO</h4>
-            <button id="crypto-buy" style="background: #002d72; color: white; border: none;">+$1,000 (1 CRO)</button>
-            <div class="lvl-text" style="color: #4da3ff;">Refill Balance</div>
+            <h4 style="color: #4da3ff;">TEST REFILL</h4>
+            <button id="crypto-buy" style="background: #002d72; color: white; border: none;">+1,000 (0.1 TCRO)</button>
+            <div class="lvl-text" style="color: #4da3ff;">Cronos Testnet</div>
         </div>
     </div>
 </div>
 
 <script>
-    // --- INTEGRATION SETTINGS ---
+    // --- SETTINGS ---
     const DEVELOPER_WALLET = "0x53140cbcC51E9b113C4a30818fE947a1948eB947";
+    const TESTNET_CHAIN_ID = 338n; 
+
     let provider, signer, address, walletConnected = false;
 
-    // --- ORIGINAL STATE ---
     const state = {
         money: 0,
         copper: { count: 1, val: 1, buyCost: 10, upCost: 20 },
@@ -224,12 +225,19 @@
     const COIN_SIZE = 44;
     let audioCtx = null;
 
-    // --- WALLET FUNCTIONS ---
+    // --- WEB3 FUNCTIONS ---
     async function connectWallet() {
         if (window.ethereum) {
             try {
                 provider = new ethers.BrowserProvider(window.ethereum);
                 const accounts = await provider.send("eth_requestAccounts", []);
+                const network = await provider.getNetwork();
+                
+                // Optional: Alert if not on testnet
+                if (network.chainId !== TESTNET_CHAIN_ID) {
+                    alert("Switch your wallet to Cronos Testnet!");
+                }
+
                 signer = await provider.getSigner();
                 address = accounts[0];
                 walletConnected = true;
@@ -238,26 +246,32 @@
                 document.getElementById('wallet-addr').textContent = address.slice(0,10) + "...";
                 updateUI();
             } catch (err) { console.error(err); }
-        } else { alert("Please use Crypto.com DeFi Wallet Browser!"); }
+        } else { alert("Please use a Web3 Browser!"); }
     }
 
     async function buyWithCrypto() {
         if (!walletConnected) return alert("Connect wallet first!");
+        
+        const network = await provider.getNetwork();
+        if (network.chainId !== TESTNET_CHAIN_ID) {
+            return alert("Please switch your wallet to the Cronos Testnet (Chain ID 338)");
+        }
+
         document.getElementById('waiting-screen').style.display = 'flex';
         try {
             const tx = await signer.sendTransaction({
                 to: DEVELOPER_WALLET,
-                value: ethers.parseEther("1.0") 
+                value: ethers.parseEther("0.1") // Set to 0.1 for testing
             });
             await tx.wait();
             state.money += 1000;
             updateUI();
-            alert("Success! $1,000 added.");
+            alert("Testnet Success! +1,000 Game Money added.");
         } catch (err) { alert("Transaction failed."); }
         document.getElementById('waiting-screen').style.display = 'none';
     }
 
-    // --- ORIGINAL GAME LOGIC ---
+    // --- GAME ENGINE ---
     function playSound(type) {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -373,7 +387,7 @@
         };
     }
 
-    // --- INITIALIZE ---
+    // --- INIT ---
     document.getElementById('connect-btn').onclick = connectWallet;
     document.getElementById('crypto-buy').onclick = buyWithCrypto;
     bind('copper', 'c', 1, 1.8); 
