@@ -1,309 +1,322 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Coin Shake Flip</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: system-ui, sans-serif;
-      background: #111;
-      color: #eee;
-      height: 100vh;
-      overflow: hidden;
-      touch-action: manipulation;
-      user-select: none;
-    }
-    header {
-      padding: 12px;
-      background: #1a1a2e;
-      text-align: center;
-      border-bottom: 1px solid #444;
-    }
-    h1 { margin: 8px 0 4px 0; font-size: 1.5rem; }
-    #stats {
-      font-size: 1.1rem;
-      margin: 4px 0 12px 0;
-    }
-    #stats span { color: #ffd700; }
-    #buy-row {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    button {
-      padding: 10px 16px;
-      margin: 2px;
-      font-size: 0.95rem;
-      border: none;
-      border-radius: 8px;
-      background: #6200ea;
-      color: white;
-      font-weight: bold;
-      touch-action: manipulation;
-    }
-    button:disabled { background: #444; opacity: 0.6; }
-    #shake-instruction {
-      text-align: center;
-      font-size: 1.2rem;
-      color: #00d4ff;
-      margin: 10px;
-    }
-    #coins-container {
-      position: relative;
-      height: calc(100vh - 220px);
-      overflow: hidden;
-      background: radial-gradient(circle at center, #222 0%, #111 100%);
-    }
-    .coin {
-      position: absolute;
-      width: 70px;
-      height: 70px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      font-weight: bold;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-      border: 2px solid #333;
-      color: #fff;
-      text-align: center;
-      pointer-events: auto;
-    }
-    .bronze {
-      background: linear-gradient(145deg, #cd7f32, #b8860b);
-    }
-    .silver {
-      background: linear-gradient(145deg, #c0c0c0, #a9a9a9);
-    }
-    .animating {
-      pointer-events: none;
-    }
-    #message {
-      position: fixed;
-      top: 45%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 2.8rem;
-      font-weight: bold;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.3s, transform 0.3s;
-      text-shadow: 0 0 15px #000;
-      z-index: 100;
-    }
-    #message.show { 
-      opacity: 1; 
-      transform: translate(-50%, -50%) scale(1.1);
-    }
-  </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Casino Coin Toss</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: 'Georgia', serif; 
+            /* Fix for the blue highlight/square on click */
+            -webkit-tap-highlight-color: transparent; 
+        }
+        
+        body {
+            background: #0a0a0a;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .game-container {
+            width: 1000px;
+            max-width: 98%;
+            background: #1a1a1a;
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            border: 4px solid #333;
+        }
+
+        header {
+            padding: 10px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to bottom, #222, #111);
+            border-bottom: 3px solid #d4af37;
+        }
+
+        .money-display { 
+            font-size: 28px; 
+            color: #d4af37; 
+            font-weight: bold; 
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+
+        /* --- CASINO TABLE --- */
+        .table-top {
+            position: relative;
+            width: 100%;
+            height: 520px; 
+            background: #076324; 
+            background-image: radial-gradient(circle at center, #0a8030 0%, #076324 100%);
+            border: 15px solid #3d2b1f; 
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.7);
+            overflow: hidden;
+        }
+
+        .table-top::after {
+            content: '';
+            position: absolute;
+            top: 20px; left: 20px; right: 20px; bottom: 20px;
+            border: 2px solid rgba(212, 175, 55, 0.15);
+            border-radius: 120px;
+            pointer-events: none;
+        }
+
+        /* --- COINS --- */
+        .coin {
+            position: absolute;
+            width: 42px; 
+            height: 42px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+            transition: left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                        top 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                        transform 0.5s;
+            z-index: 10;
+            user-select: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            /* Removes the blue square outline */
+            outline: none; 
+        }
+
+        .coin.flipping {
+            z-index: 100;
+            animation: coin-spin 0.5s linear infinite;
+            transform: scale(2.2); 
+            pointer-events: none;
+        }
+
+        @keyframes coin-spin {
+            0% { transform: scale(2.2) rotateX(0deg); }
+            100% { transform: scale(2.2) rotateX(360deg); }
+        }
+
+        .coin.copper { background: linear-gradient(135deg, #b87333, #8b4513); border: 2px solid #5d2906; color: #fff; }
+        .coin.silver { background: linear-gradient(135deg, #c0c0c0, #7a7a7a); border: 2px solid #444; color: #333; }
+        .coin.gold { background: linear-gradient(135deg, #ffd700, #b8860b); border: 2px solid #8a6d00; color: #4d3d00; }
+
+        /* --- UI CONTROLS --- */
+        .controls-row {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: #111;
+        }
+
+        .upgrade-group {
+            flex: 1;
+            background: #1a1a1a;
+            padding: 8px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border: 1px solid #333;
+        }
+
+        .upgrade-group h4 { font-size: 12px; color: #d4af37; text-align: center; letter-spacing: 1px; }
+
+        .btn-pair { display: flex; gap: 6px; }
+
+        button {
+            flex: 1;
+            padding: 5px;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid #d4af37;
+            border-radius: 4px;
+            background: #222;
+            color: #d4af37;
+            transition: 0.2s;
+            outline: none;
+        }
+
+        button:hover:not(:disabled) { background: #d4af37; color: #000; }
+        button:disabled { border-color: #444; color: #555; cursor: not-allowed; }
+        
+        .lvl-text { font-size: 11px; color: #888; text-align: center; font-family: sans-serif; }
+
+        .floating-val {
+            position: absolute;
+            color: #fff;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 200;
+            text-shadow: 0 0 5px rgba(0,0,0,1);
+            animation: float-up 0.8s ease-out forwards;
+        }
+
+        @keyframes float-up {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-70px); }
+        }
+    </style>
 </head>
 <body>
 
-<header>
-  <h1>🪙 Coin Shake Flip</h1>
-  <div id="stats">
-    $<span id="money">0</span> 
-    • Bronze: <span id="bronze-count">1</span> 
-    • Silver: <span id="silver-count">0</span> 
-    • Streak: <span id="streak-count">0</span>
-  </div>
-  <div id="buy-row">
-    <button id="buy-bronze">Buy Bronze ($10)</button>
-    <button id="buy-silver">Unlock Silver ($50)</button>
-  </div>
-  <div id="shake-instruction">Shake phone to flip coins!</div>
-</header>
+<div class="game-container">
+    <header>
+        <h3>ROYAL CASINO TOSS</h3>
+        <div class="money-display">$<span id="money">0</span></div>
+    </header>
 
-<div id="coins-container"></div>
+    <div class="table-top" id="table"></div>
 
-<div id="message"></div>
+    <div class="controls-row">
+        <div class="upgrade-group">
+            <h4>COPPER CHIP</h4>
+            <div class="btn-pair">
+                <button id="buy-copper">BUY ($<span id="cost-c-buy">10</span>)</button>
+                <button id="up-copper">LVL+ ($<span id="cost-c-up">20</span>)</button>
+            </div>
+            <div class="lvl-text">Qty: <span id="cnt-c">1</span> | Payout: $<span id="val-c">1</span></div>
+        </div>
+
+        <div class="upgrade-group">
+            <h4>SILVER CHIP</h4>
+            <div class="btn-pair">
+                <button id="buy-silver">BUY ($<span id="cost-s-buy">100</span>)</button>
+                <button id="up-silver">LVL+ ($<span id="cost-s-up">150</span>)</button>
+            </div>
+            <div class="lvl-text">Qty: <span id="cnt-s">0</span> | Payout: $<span id="val-s">5</span></div>
+        </div>
+
+        <div class="upgrade-group">
+            <h4>GOLD CHIP</h4>
+            <div class="btn-pair">
+                <button id="buy-gold">BUY ($<span id="cost-g-buy">500</span>)</button>
+                <button id="up-gold">LVL+ ($<span id="cost-g-up">600</span>)</button>
+            </div>
+            <div class="lvl-text">Qty: <span id="cnt-g">0</span> | Payout: $<span id="val-g">20</span></div>
+        </div>
+    </div>
+</div>
 
 <script>
-// ──────────────────────────────────────────────
-let money = Number(localStorage.getItem('flipMoney')) || 0;
-let bronze = Number(localStorage.getItem('flipBronze')) || 1;
-let silver = Number(localStorage.getItem('flipSilver')) || 0;
-let streak = Number(localStorage.getItem('flipStreak')) || 0;
+    const state = {
+        money: 0,
+        copper: { count: 1, val: 1, buyCost: 10, upCost: 20 },
+        silver: { count: 0, val: 5, buyCost: 100, upCost: 150 },
+        gold: { count: 0, val: 20, buyCost: 500, upCost: 600 }
+    };
 
-const moneyEl = document.getElementById('money');
-const bronzeEl = document.getElementById('bronze-count');
-const silverEl = document.getElementById('silver-count');
-const streakEl = document.getElementById('streak-count');
-const container = document.getElementById('coins-container');
-const msg = document.getElementById('message');
+    const table = document.getElementById('table');
+    const COIN_SIZE = 42;
 
-let engine, world, runner;
-let coins = [];
-let ground, leftWall, rightWall, topWall;
+    function updateUI() {
+        document.getElementById('money').textContent = Math.floor(state.money).toLocaleString();
+        
+        const updateSec = (key, prefix) => {
+            document.getElementById(`cnt-${prefix}`).textContent = state[key].count;
+            document.getElementById(`val-${prefix}`).textContent = state[key].val;
+            document.getElementById(`cost-${prefix}-buy`).textContent = state[key].buyCost;
+            document.getElementById(`cost-${prefix}-up`).textContent = state[key].upCost;
+            document.getElementById(`buy-${key}`).disabled = state.money < state[key].buyCost;
+            document.getElementById(`up-${key}`).disabled = state.money < state[key].upCost;
+        };
 
-let lastShakeTime = 0;
-const SHAKE_THRESHOLD = 20; // adjust sensitivity
-const SHAKE_COOLDOWN = 2000; // ms to prevent rapid shakes
+        updateSec('copper', 'c');
+        updateSec('silver', 's');
+        updateSec('gold', 'g');
+    }
 
-function save() {
-  localStorage.setItem('flipMoney', money);
-  localStorage.setItem('flipBronze', bronze);
-  localStorage.setItem('flipSilver', silver);
-  localStorage.setItem('flipStreak', streak);
-}
+    function createCoin(type) {
+        const coin = document.createElement('div');
+        coin.className = `coin ${type}`;
+        const x = 60 + Math.random() * (table.clientWidth - 120);
+        const y = 60 + Math.random() * (table.clientHeight - 120);
+        coin.style.left = `${x}px`;
+        coin.style.top = `${y}px`;
+        coin.textContent = '$';
+        coin.onclick = () => flip(coin, type);
+        table.appendChild(coin);
+    }
 
-function updateUI() {
-  moneyEl.textContent = Math.floor(money);
-  bronzeEl.textContent = bronze;
-  silverEl.textContent = silver;
-  streakEl.textContent = streak;
-  const bronzeCost = nextBronzeCost();
-  const silverCost = nextSilverCost();
-  document.getElementById('buy-bronze').textContent = `Buy Bronze ($${bronzeCost})`;
-  document.getElementById('buy-bronze').disabled = money < bronzeCost;
-  const silverBtn = document.getElementById('buy-silver');
-  silverBtn.textContent = silver === 0 ? `Unlock Silver ($${silverCost})` : `Buy Silver ($${silverCost})`;
-  silverBtn.disabled = money < silverCost;
-}
+    function flip(coin, type) {
+        if (coin.classList.contains('flipping')) return;
+        coin.classList.add('flipping');
 
-function nextBronzeCost() {
-  return Math.ceil(10 * Math.pow(2.5, bronze - 1));
-}
+        const currentX = parseFloat(coin.style.left);
+        const currentY = parseFloat(coin.style.top);
+        
+        let newX = currentX + (Math.random() - 0.5) * 350;
+        let newY = currentY + (Math.random() - 0.5) * 350;
 
-function nextSilverCost() {
-  return Math.ceil(50 * Math.pow(2.5, silver));
-}
+        newX = Math.max(40, Math.min(table.clientWidth - COIN_SIZE - 40, newX));
+        newY = Math.max(40, Math.min(table.clientHeight - COIN_SIZE - 40, newY));
 
-function showMessage(text, color = '#0f8') {
-  msg.textContent = text;
-  msg.style.color = color;
-  msg.classList.add('show');
-  setTimeout(() => msg.classList.remove('show'), 1000);
-}
+        coin.style.left = `${newX}px`;
+        coin.style.top = `${newY}px`;
 
-function initPhysics() {
-  engine = Matter.Engine.create();
-  engine.gravity.y = 1.5; // slightly higher gravity for quicker lands
-  world = engine.world;
-  runner = Matter.Runner.create();
-  Matter.Runner.run(runner, engine);
+        setTimeout(() => {
+            coin.classList.remove('flipping');
+            if (Math.random() > 0.45) { // Win chance
+                const win = state[type].val;
+                state.money += win;
+                coin.textContent = '$';
+                showFloat(newX, newY, `+$${win}`);
+            } else {
+                coin.textContent = '💀';
+                // Briefly show skull, then back to $ for the next flip
+                setTimeout(() => { coin.textContent = '$'; }, 800);
+            }
+            updateUI();
+        }, 500);
+    }
 
-  // Boundaries
-  const width = container.clientWidth;
-  const height = container.clientHeight;
-  ground = Matter.Bodies.rectangle(width / 2, height, width, 50, { isStatic: true });
-  leftWall = Matter.Bodies.rectangle(0, height / 2, 50, height, { isStatic: true });
-  rightWall = Matter.Bodies.rectangle(width, height / 2, 50, height, { isStatic: true });
-  topWall = Matter.Bodies.rectangle(width / 2, 0, width, 50, { isStatic: true });
-  Matter.World.add(world, [ground, leftWall, rightWall, topWall]);
+    function showFloat(x, y, text) {
+        const float = document.createElement('div');
+        float.className = 'floating-val';
+        float.textContent = text;
+        float.style.left = `${x}px`;
+        float.style.top = `${y}px`;
+        table.appendChild(float);
+        setTimeout(() => float.remove(), 800);
+    }
 
-  // Update DOM
-  Matter.Events.on(engine, 'afterUpdate', () => {
-    coins.forEach(coin => {
-      const pos = coin.body.position;
-      coin.elem.style.left = `${pos.x - 35}px`;
-      coin.elem.style.top = `${pos.y - 35}px`;
-      coin.elem.style.transform = `rotate(${coin.body.angle}rad)`;
+    const setupActions = (type, prefix, valInc, upMult) => {
+        document.getElementById(`buy-${type}`).onclick = () => {
+            if (state.money >= state[type].buyCost) {
+                state.money -= state[type].buyCost;
+                state[type].count++;
+                state[type].buyCost = Math.floor(state[type].buyCost * 1.5);
+                createCoin(type);
+                updateUI();
+            }
+        };
+        document.getElementById(`up-${type}`).onclick = () => {
+            if (state.money >= state[type].upCost) {
+                state.money -= state[type].upCost;
+                state[type].val += valInc;
+                state[type].upCost = Math.floor(state[type].upCost * upMult);
+                updateUI();
+            }
+        };
+    };
 
-      // Check for landing (low velocity)
-      const vel = coin.body.velocity;
-      if (Math.abs(vel.x) < 0.5 && Math.abs(vel.y) < 0.5 && !coin.revealed) {
-        coin.revealed = true;
-        coin.elem.innerText = coin.isHeads ? '$' : '☠';
-        if (coin.isHeads) {
-          const multi = streak >= 4 ? 1.2 : 1;
-          const earned = Math.floor(coin.reward * multi);
-          money += earned;
-          streak++;
-          showMessage(`+$${earned}${multi > 1 ? ' 🔥' : ''}`, '#4caf50');
-        } else {
-          streak = 0;
-          showMessage('💀', '#f44336');
-        }
-        save();
-        updateUI();
-      }
-    });
-  });
-}
+    setupActions('copper', 'c', 1, 1.8);
+    setupActions('silver', 's', 5, 2.0);
+    setupActions('gold', 'g', 20, 2.2);
 
-function createCoin(type) {
-  const radius = 35;
-  const body = Matter.Bodies.circle(Math.random() * container.clientWidth, Math.random() * 100, radius, {
-    restitution: 0.6, // bouncy
-    friction: 0.3,
-    density: 0.002
-  });
-  Matter.World.add(world, body);
-
-  const elem = document.createElement('div');
-  elem.className = 'coin ' + type;
-  elem.innerText = '?';
-
-  const coin = { body, elem, type, revealed: false, isHeads: Math.random() < 0.5, reward: type === 'silver' ? 5 : 1 };
-
-  container.appendChild(elem);
-  return coin;
-}
-
-function shakeCoins() {
-  const now = Date.now();
-  if (now - lastShakeTime < SHAKE_COOLDOWN) return;
-  lastShakeTime = now;
-
-  coins.forEach(coin => {
-    coin.revealed = false;
-    coin.elem.innerText = '?';
-    Matter.Body.applyForce(coin.body, coin.body.position, { x: (Math.random() - 0.5) * 0.03, y: -0.08 });
-    Matter.Body.setAngularVelocity(coin.body, (Math.random() - 0.5) * 0.2);
-  });
-  showMessage('Shake! 🎲', '#00d4ff');
-}
-
-function handleShake(event) {
-  const acceleration = event.accelerationIncludingGravity;
-  const shake = Math.sqrt(acceleration.x**2 + acceleration.y**2 + acceleration.z**2);
-  if (shake > SHAKE_THRESHOLD) {
-    shakeCoins();
-  }
-}
-
-document.getElementById('buy-bronze').onclick = () => {
-  const cost = nextBronzeCost();
-  if (money >= cost) {
-    money -= cost;
-    bronze++;
-    coins.push(createCoin('bronze'));
-    showMessage('🪙 Bronze!', '#ff9800');
-    save();
+    for(let i=0; i<state.copper.count; i++) createCoin('copper');
     updateUI();
-  }
-};
-
-document.getElementById('buy-silver').onclick = () => {
-  const cost = nextSilverCost();
-  if (money >= cost) {
-    money -= cost;
-    silver++;
-    coins.push(createCoin('silver'));
-    showMessage('⭐ Silver!', '#c0c0c0');
-    save();
-    updateUI();
-  }
-};
-
-// Init
-initPhysics();
-for (let i = 0; i < bronze; i++) coins.push(createCoin('bronze'));
-for (let i = 0; i < silver; i++) coins.push(createCoin('silver'));
-updateUI();
-
-// Shake detection
-if (window.DeviceMotionEvent) {
-  window.addEventListener('devicemotion', handleShake);
-} else {
-  showMessage('Shake not supported', '#f44');
-}
 </script>
+
 </body>
 </html>
