@@ -58,10 +58,12 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        #connect-btn {
+        #connect-btn, #reset-btn {
             background: #002d72; color: white; border: none; padding: 6px 12px;
             border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold;
+            margin-left: 8px;
         }
+        #reset-btn { background: #8b0000; }
 
         .table-top {
             position: relative;
@@ -213,6 +215,7 @@
         <div>
             <h3 style="font-size: 12px;">ROYAL TOSS</h3>
             <button id="connect-btn">CONNECT WALLET</button>
+            <button id="reset-btn">RESET PROGRESS</button>
             <span id="wallet-addr" style="display:none; font-size: 9px; color: #666;"></span>
         </div>
         <div class="money-display">$<span id="money">0</span></div>
@@ -260,7 +263,43 @@
     const CAP_SIZE = 48;
     let audioCtx = null;
 
-    // Wallet connection (previous working version)
+    // --- SAVE / LOAD FUNCTIONS ---
+    function saveGame() {
+        const saveData = {
+            money: state.money,
+            copper: state.copper,
+            silver: state.silver,
+            gold: state.gold,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('royalTossSave', JSON.stringify(saveData));
+    }
+
+    function loadGame() {
+        const saved = localStorage.getItem('royalTossSave');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                state.money = data.money || 0;
+                if (data.copper) Object.assign(state.copper, data.copper);
+                if (data.silver) Object.assign(state.silver, data.silver);
+                if (data.gold)   Object.assign(state.gold,   data.gold);
+
+                // Clear table and recreate bottlecaps based on counts
+                table.innerHTML = '';
+                for (let i = 0; i < state.copper.count; i++) createBottlecap('copper');
+                for (let i = 0; i < state.silver.count; i++) createBottlecap('silver');
+                for (let i = 0; i < state.gold.count;   i++) createBottlecap('gold');
+
+                updateUI();
+                console.log("Game progress loaded");
+            } catch (e) {
+                console.warn("Failed to load save data – starting fresh", e);
+            }
+        }
+    }
+
+    // --- WALLET CONNECTION ---
     async function connectWallet() {
         if (walletConnected) return;
 
@@ -324,6 +363,7 @@
             await tx.wait();
             state.money += 1000;
             updateUI();
+            saveGame();  // Save after refill
             alert("Success! +1,000 added (tx: " + tx.hash + ")");
         } catch (err) {
             alert("Transaction failed: " + err.message);
@@ -332,6 +372,7 @@
         document.getElementById('waiting-screen').style.display = 'none';
     }
 
+    // --- GAME ENGINE ---
     function playSound(type) {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -369,7 +410,7 @@
         const startY = 50 + Math.random() * (table.clientHeight - 120);
         cap.style.left = `${startX}px`;
         cap.style.top = `${startY}px`;
-        cap.textContent = '★';  // simple emblem - you can change to other symbols
+        cap.textContent = '★';
         cap.onpointerdown = (e) => {
             e.stopPropagation();
             const currentX = parseFloat(cap.style.left);
@@ -414,6 +455,7 @@
                 setTimeout(() => { cap.textContent = '★'; }, 800);
             }
             updateUI();
+            saveGame();  // Save after every flip outcome
         }, 500);
     }
 
@@ -434,6 +476,7 @@
                 state[type].buyCost = Math.floor(state[type].buyCost * 1.5);
                 createBottlecap(type);
                 updateUI();
+                saveGame();  // Save after buy
             }
         };
         document.getElementById(`up-${type}`).onclick = () => {
@@ -442,6 +485,7 @@
                 state[type].val += vInc;
                 state[type].upCost = Math.floor(state[type].upCost * uM);
                 updateUI();
+                saveGame();  // Save after upgrade
             }
         };
     }
@@ -453,8 +497,23 @@
     bind('silver', 's', 5, 2.0);
     bind('gold', 'g', 20, 2.2);
 
-    for(let i = 0; i < state.copper.count; i++) createBottlecap('copper');
+    // Load saved progress first
+    loadGame();
+
+    // If no copper caps exist after loading (fresh start), create initial ones
+    if (state.copper.count === 1 && table.children.length === 0) {
+        createBottlecap('copper');
+    }
+
     updateUI();
+
+    // Reset button
+    document.getElementById('reset-btn').onclick = () => {
+        if (confirm("Reset all game progress? This cannot be undone.")) {
+            localStorage.removeItem('royalTossSave');
+            location.reload();
+        }
+    };
 
     if (window.ethereum) {
         window.ethereum.on('chainChanged', () => window.location.reload());
