@@ -6,13 +6,13 @@
     <title>Royal Casino - Testnet Mode</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        * { 
-            margin: 0; padding: 0; box-sizing: border-box; 
-            font-family: 'Georgia', serif; 
-            -webkit-tap-highlight-color: transparent; 
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            font-family: 'Georgia', serif;
+            -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
-        
+       
         body {
             background: #0a0a0a;
             height: 100vh;
@@ -22,7 +22,7 @@
             color: white;
             overflow: hidden;
         }
-        
+       
         .game-container {
             width: 1000px;
             max-width: 98%;
@@ -33,7 +33,6 @@
             border: 4px solid #333;
             position: relative;
         }
-
         header {
             padding: 8px 20px;
             display: flex;
@@ -42,9 +41,7 @@
             background: linear-gradient(to bottom, #222, #111);
             border-bottom: 3px solid #d4af37;
         }
-
         .money-display { font-size: 24px; color: #d4af37; font-weight: bold; }
-
         /* --- WAITING OVERLAY --- */
         #waiting-screen {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -53,58 +50,53 @@
         }
         .spinner { width: 50px; height: 50px; border: 5px solid #333; border-top: 5px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
         #connect-btn {
-            background: #002d72; color: white; border: none; padding: 6px 12px; 
+            background: #002d72; color: white; border: none; padding: 6px 12px;
             border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold;
         }
-
         .table-top {
             position: relative;
             width: 100%;
             height: 55vh;
-            background: #076324; 
+            background: #076324;
             background-image: radial-gradient(circle at center, #0a8030 0%, #076324 100%);
-            border: 12px solid #3d2b1f; 
+            border: 12px solid #3d2b1f;
             box-shadow: inset 0 0 100px rgba(0,0,0,0.7);
             overflow: hidden;
             touch-action: none;
         }
-
-        .coin {
+        .bottlecap {
             position: absolute;
             width: 44px; height: 44px;
-            border-radius: 50%;
+            border-radius: 50% 50% 50% 50% / 45% 45% 55% 55%; /* slight crimp look */
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
-            transition: left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
-                        top 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+            transition: left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        top 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
                         transform 0.5s;
             z-index: 10;
             user-select: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-            outline: none; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.35);
+            outline: none;
             cursor: pointer;
+            image-rendering: pixelated; /* crisp pixel style even with CSS */
         }
-
-        .coin.flipping {
+        .bottlecap.flipping {
             z-index: 100;
-            animation: coin-spin 0.5s linear infinite;
-            transform: scale(2.2); 
+            animation: bottlecap-spin 0.5s linear infinite;
+            transform: scale(2.2);
             pointer-events: none;
         }
-
-        @keyframes coin-spin {
+        @keyframes bottlecap-spin {
             0% { transform: scale(2.2) rotateX(0deg); }
             100% { transform: scale(2.2) rotateX(360deg); }
         }
-
-        .coin.copper { background: radial-gradient(#b87333, #8b4513); border: 2px solid #5d2906; color: #fff; }
-        .coin.silver { background: radial-gradient(#c0c0c0, #7a7a7a); border: 2px solid #444; color: #333; }
-        .coin.gold { background: radial-gradient(#ffd700, #b8860b); border: 2px solid #8a6d00; color: #4d3d00; }
+        .bottlecap.copper   { background: radial-gradient(#b87333, #8b4513); border: 3px solid #5d2906; color: #fff; }
+        .bottlecap.silver   { background: radial-gradient(#d0d0d0, #a0a0a0); border: 3px solid #555; color: #222; box-shadow: 0 4px 10px rgba(0,0,0,0.6), inset 0 3px 6px rgba(255,255,255,0.5); }
+        .bottlecap.gold     { background: radial-gradient(#ffeb3b, #d4af37, #b8860b); border: 3px solid #8a6d00; color: #3e2a00; box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 4px 8px rgba(255,255,220,0.6); }
 
         .controls-row {
             display: flex;
@@ -112,7 +104,6 @@
             padding: 10px;
             background: #111;
         }
-
         .upgrade-group {
             flex: 1;
             background: #1a1a1a;
@@ -123,9 +114,7 @@
             gap: 4px;
             border: 1px solid #333;
         }
-
         .upgrade-group h4 { font-size: 10px; color: #d4af37; text-align: center; }
-
         button {
             padding: 8px 2px;
             font-size: 10px;
@@ -136,11 +125,9 @@
             color: #d4af37;
             cursor: pointer;
         }
-
         button:disabled { border-color: #444; color: #555; cursor: not-allowed; }
-        
+       
         .lvl-text { font-size: 10px; color: #888; text-align: center; }
-
         .floating-val {
             position: absolute;
             color: #fff;
@@ -150,7 +137,6 @@
             text-shadow: 0 0 5px #000;
             animation: float-up 0.8s ease-out forwards;
         }
-
         @keyframes float-up {
             0% { opacity: 1; transform: translateY(0); }
             100% { opacity: 0; transform: translateY(-70px); }
@@ -158,14 +144,12 @@
     </style>
 </head>
 <body>
-
 <div class="game-container">
     <div id="waiting-screen">
         <div class="spinner"></div>
         <h2 style="color: #d4af37;">TESTNET TRANSACTION</h2>
         <p id="wait-msg" style="font-size: 12px; color: #888; margin-top: 10px;">Waiting for 0.1 TCRO...</p>
     </div>
-
     <header>
         <div>
             <h3 style="font-size: 12px;">ROYAL TOSS</h3>
@@ -174,9 +158,7 @@
         </div>
         <div class="money-display">$<span id="money">0</span></div>
     </header>
-
     <div class="table-top" id="table"></div>
-
     <div class="controls-row">
         <div class="upgrade-group">
             <h4>COPPER</h4>
@@ -184,21 +166,18 @@
             <button id="up-copper">LVL+ ($<span id="cost-c-up">20</span>)</button>
             <div class="lvl-text">Qty:<span id="cnt-c">1</span> Val:$<span id="val-c">1</span></div>
         </div>
-
         <div class="upgrade-group">
             <h4>SILVER</h4>
             <button id="buy-silver">BUY ($<span id="cost-s-buy">100</span>)</button>
             <button id="up-silver">LVL+ ($<span id="cost-s-up">150</span>)</button>
             <div class="lvl-text">Qty:<span id="cnt-s">0</span> Val:$<span id="val-s">5</span></div>
         </div>
-
         <div class="upgrade-group">
             <h4>GOLD</h4>
             <button id="buy-gold">BUY ($<span id="cost-g-buy">500</span>)</button>
             <button id="up-gold">LVL+ ($<span id="cost-g-up">600</span>)</button>
             <div class="lvl-text">Qty:<span id="cnt-g">0</span> Val:$<span id="val-g">20</span></div>
         </div>
-
         <div class="upgrade-group" style="border-color: #002d72; background: #00122e;">
             <h4 style="color: #4da3ff;">TEST REFILL</h4>
             <button id="crypto-buy" style="background: #002d72; color: white; border: none;">+1,000 (0.1 TCRO)</button>
@@ -210,19 +189,16 @@
 <script>
     // --- SETTINGS ---
     const DEVELOPER_WALLET = "0x53140cbcC51E9b113C4a30818fE947a1948eB947";
-    const TESTNET_CHAIN_ID = 338n; 
-
+    const TESTNET_CHAIN_ID = 338n;
     let provider, signer, address, walletConnected = false;
-
     const state = {
         money: 0,
         copper: { count: 1, val: 1, buyCost: 10, upCost: 20 },
         silver: { count: 0, val: 5, buyCost: 100, upCost: 150 },
         gold: { count: 0, val: 20, buyCost: 500, upCost: 600 }
     };
-
     const table = document.getElementById('table');
-    const COIN_SIZE = 44;
+    const CAP_SIZE = 44;
     let audioCtx = null;
 
     // --- WEB3 FUNCTIONS ---
@@ -232,12 +208,10 @@
                 provider = new ethers.BrowserProvider(window.ethereum);
                 const accounts = await provider.send("eth_requestAccounts", []);
                 const network = await provider.getNetwork();
-                
-                // Optional: Alert if not on testnet
+               
                 if (network.chainId !== TESTNET_CHAIN_ID) {
                     alert("Switch your wallet to Cronos Testnet!");
                 }
-
                 signer = await provider.getSigner();
                 address = accounts[0];
                 walletConnected = true;
@@ -251,17 +225,16 @@
 
     async function buyWithCrypto() {
         if (!walletConnected) return alert("Connect wallet first!");
-        
+       
         const network = await provider.getNetwork();
         if (network.chainId !== TESTNET_CHAIN_ID) {
             return alert("Please switch your wallet to the Cronos Testnet (Chain ID 338)");
         }
-
         document.getElementById('waiting-screen').style.display = 'flex';
         try {
             const tx = await signer.sendTransaction({
                 to: DEVELOPER_WALLET,
-                value: ethers.parseEther("0.1") // Set to 0.1 for testing
+                value: ethers.parseEther("0.1")
             });
             await tx.wait();
             state.money += 1000;
@@ -301,28 +274,28 @@
         document.getElementById('crypto-buy').disabled = !walletConnected;
     }
 
-    function createCoin(type) {
-        const coin = document.createElement('div');
-        coin.className = `coin ${type}`;
-        coin.dataset.type = type;
+    function createBottlecap(type) {
+        const cap = document.createElement('div');
+        cap.className = `bottlecap ${type}`;
+        cap.dataset.type = type;
         const startX = 50 + Math.random() * (table.clientWidth - 100);
         const startY = 50 + Math.random() * (table.clientHeight - 100);
-        coin.style.left = `${startX}px`;
-        coin.style.top = `${startY}px`;
-        coin.textContent = '$';
-        coin.onpointerdown = (e) => {
+        cap.style.left = `${startX}px`;
+        cap.style.top = `${startY}px`;
+        cap.textContent = '★';  // emblem — can change to 🧢 / ⚙ / etc.
+        cap.onpointerdown = (e) => {
             e.stopPropagation();
-            const currentX = parseFloat(coin.style.left);
-            const currentY = parseFloat(coin.style.top);
+            const currentX = parseFloat(cap.style.left);
+            const currentY = parseFloat(cap.style.top);
             checkGroupFlip(currentX, currentY);
         };
-        table.appendChild(coin);
+        table.appendChild(cap);
     }
 
     function checkGroupFlip(targetX, targetY) {
-        const coins = document.querySelectorAll('.coin');
+        const caps = document.querySelectorAll('.bottlecap');
         let soundPlayed = false;
-        coins.forEach(c => {
+        caps.forEach(c => {
             const cx = parseFloat(c.style.left);
             const cy = parseFloat(c.style.top);
             const dist = Math.sqrt(Math.pow(cx - targetX, 2) + Math.pow(cy - targetY, 2));
@@ -333,26 +306,26 @@
         });
     }
 
-    function flip(coin) {
-        coin.classList.add('flipping');
-        const type = coin.dataset.type;
-        let newX = parseFloat(coin.style.left) + (Math.random() - 0.5) * 300;
-        let newY = parseFloat(coin.style.top) + (Math.random() - 0.5) * 300;
-        newX = Math.max(20, Math.min(table.clientWidth - COIN_SIZE - 20, newX));
-        newY = Math.max(20, Math.min(table.clientHeight - COIN_SIZE - 20, newY));
-        coin.style.left = `${newX}px`;
-        coin.style.top = `${newY}px`;
+    function flip(cap) {
+        cap.classList.add('flipping');
+        const type = cap.dataset.type;
+        let newX = parseFloat(cap.style.left) + (Math.random() - 0.5) * 300;
+        let newY = parseFloat(cap.style.top) + (Math.random() - 0.5) * 300;
+        newX = Math.max(20, Math.min(table.clientWidth - CAP_SIZE - 20, newX));
+        newY = Math.max(20, Math.min(table.clientHeight - CAP_SIZE - 20, newY));
+        cap.style.left = `${newX}px`;
+        cap.style.top = `${newY}px`;
         setTimeout(() => {
-            coin.classList.remove('flipping');
+            cap.classList.remove('flipping');
             if (Math.random() > 0.45) {
                 const win = state[type].val;
                 state.money += win;
-                coin.textContent = '$';
+                cap.textContent = '★';
                 playSound('win');
                 showFloat(newX, newY, `+$${win}`);
             } else {
-                coin.textContent = '💀';
-                setTimeout(() => { coin.textContent = '$'; }, 800);
+                cap.textContent = '💀';
+                setTimeout(() => { cap.textContent = '★'; }, 800);
             }
             updateUI();
         }, 500);
@@ -373,7 +346,7 @@
                 state.money -= state[type].buyCost;
                 state[type].count++;
                 state[type].buyCost = Math.floor(state[type].buyCost * 1.5);
-                createCoin(type); 
+                createBottlecap(type);
                 updateUI();
             }
         };
@@ -390,11 +363,11 @@
     // --- INIT ---
     document.getElementById('connect-btn').onclick = connectWallet;
     document.getElementById('crypto-buy').onclick = buyWithCrypto;
-    bind('copper', 'c', 1, 1.8); 
-    bind('silver', 's', 5, 2.0); 
-    bind('gold', 'g', 20, 2.2);
+    bind('copper',   'c', 1,  1.8);
+    bind('silver',   's', 5,  2.0);
+    bind('gold',     'g', 20, 2.2);
 
-    for(let i=0; i<state.copper.count; i++) createCoin('copper');
+    for(let i = 0; i < state.copper.count; i++) createBottlecap('copper');
     updateUI();
 </script>
 </body>
