@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Royal Casino - Testnet Mode</title>
+    <title>Flip Bottle Caps - Testnet Mode</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
         * {
@@ -68,7 +68,7 @@
         .bottlecap {
             position: absolute;
             width: 44px; height: 44px;
-            border-radius: 50% 50% 50% 50% / 45% 45% 55% 55%; /* slight crimp look */
+            border-radius: 50% 50% 50% 50% / 45% 45% 55% 55%;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -82,7 +82,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.35);
             outline: none;
             cursor: pointer;
-            image-rendering: pixelated; /* crisp pixel style even with CSS */
+            image-rendering: pixelated;
         }
         .bottlecap.flipping {
             z-index: 100;
@@ -189,7 +189,7 @@
 <script>
     // --- SETTINGS ---
     const DEVELOPER_WALLET = "0x53140cbcC51E9b113C4a30818fE947a1948eB947";
-    const TESTNET_CHAIN_ID = 338n;
+    const TESTNET_CHAIN_ID = 338n;  // Cronos Testnet
     let provider, signer, address, walletConnected = false;
     const state = {
         money: 0,
@@ -201,50 +201,107 @@
     const CAP_SIZE = 44;
     let audioCtx = null;
 
-    // --- WEB3 FUNCTIONS ---
+    // --- IMPROVED WALLET CONNECTION with AUTO SWITCH/ADD CHAIN ---
     async function connectWallet() {
-        if (window.ethereum) {
-            try {
-                provider = new ethers.BrowserProvider(window.ethereum);
-                const accounts = await provider.send("eth_requestAccounts", []);
-                const network = await provider.getNetwork();
-               
-                if (network.chainId !== TESTNET_CHAIN_ID) {
-                    alert("Switch your wallet to Cronos Testnet!");
+        if (walletConnected) return;
+
+        if (!window.ethereum) {
+            alert("No wallet detected.\n\nFor Crypto.com Onchain Wallet:\n1. Install the 'Crypto.com | Onchain Extension' from Chrome Web Store\n2. Create/import wallet\n3. Refresh this page and try again.\n\n(Mobile: Open this page inside the Onchain app browser)");
+            return;
+        }
+
+        try {
+            provider = new ethers.BrowserProvider(window.ethereum);
+
+            // Get current network
+            const network = await provider.getNetwork();
+            const currentChainId = Number(network.chainId);
+            const targetChainId = Number(TESTNET_CHAIN_ID);
+
+            if (currentChainId !== targetChainId) {
+                try {
+                    // Try to switch chain
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: `0x${targetChainId.toString(16)}` }],
+                    });
+                } catch (switchError) {
+                    // Chain not added → add it
+                    if (switchError.code === 4902) {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: `0x${targetChainId.toString(16)}`,
+                                chainName: 'Cronos Testnet',
+                                nativeCurrency: {
+                                    name: 'TCRO',
+                                    symbol: 'TCRO',
+                                    decimals: 18
+                                },
+                                rpcUrls: ['https://evm-t3.cronos.org'],
+                                blockExplorerUrls: ['https://testnet.cronoscan.com']
+                            }]
+                        });
+
+                        // After adding, switch to it
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: `0x${targetChainId.toString(16)}` }],
+                        });
+                    } else {
+                        throw switchError;
+                    }
                 }
-                signer = await provider.getSigner();
-                address = accounts[0];
-                walletConnected = true;
-                document.getElementById('connect-btn').style.display = 'none';
-                document.getElementById('wallet-addr').style.display = 'block';
-                document.getElementById('wallet-addr').textContent = address.slice(0,10) + "...";
-                updateUI();
-            } catch (err) { console.error(err); }
-        } else { alert("Please use a Web3 Browser!"); }
+            }
+
+            // Now request accounts
+            const accounts = await provider.send("eth_requestAccounts", []);
+            signer = await provider.getSigner();
+            address = accounts[0];
+            walletConnected = true;
+
+            document.getElementById('connect-btn').style.display = 'none';
+            document.getElementById('wallet-addr').style.display = 'block';
+            document.getElementById('wallet-addr').textContent = address.slice(0,10) + "...";
+            updateUI();
+
+            alert("Connected to Cronos Testnet! Wallet: " + address.slice(0,6) + "...");
+        } catch (err) {
+            console.error("Connection error:", err);
+            alert("Failed to connect or switch chain.\n\nError: " + (err.message || "Unknown") + "\n\nMake sure the Onchain Extension is active and unlocked.");
+        }
     }
 
     async function buyWithCrypto() {
         if (!walletConnected) return alert("Connect wallet first!");
-       
-        const network = await provider.getNetwork();
-        if (network.chainId !== TESTNET_CHAIN_ID) {
-            return alert("Please switch your wallet to the Cronos Testnet (Chain ID 338)");
-        }
+
         document.getElementById('waiting-screen').style.display = 'flex';
+
         try {
+            // Double-check chain before sending
+            const network = await provider.getNetwork();
+            if (Number(network.chainId) !== Number(TESTNET_CHAIN_ID)) {
+                throw new Error("Not on Cronos Testnet – please switch manually in wallet.");
+            }
+
             const tx = await signer.sendTransaction({
                 to: DEVELOPER_WALLET,
                 value: ethers.parseEther("0.1")
             });
+
             await tx.wait();
             state.money += 1000;
             updateUI();
-            alert("Testnet Success! +1,000 Game Money added.");
-        } catch (err) { alert("Transaction failed."); }
+            alert("Success! +1,000 Game Money added (tx: " + tx.hash + ")");
+        } catch (err) {
+            alert("Transaction failed: " + (err.message || "Unknown error"));
+            console.error(err);
+        }
+
         document.getElementById('waiting-screen').style.display = 'none';
     }
 
-    // --- GAME ENGINE ---
+    // --- GAME ENGINE (unchanged) ---
     function playSound(type) {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -282,7 +339,7 @@
         const startY = 50 + Math.random() * (table.clientHeight - 100);
         cap.style.left = `${startX}px`;
         cap.style.top = `${startY}px`;
-        cap.textContent = '★';  // emblem — can change to 🧢 / ⚙ / etc.
+        cap.textContent = '★';
         cap.onpointerdown = (e) => {
             e.stopPropagation();
             const currentX = parseFloat(cap.style.left);
@@ -363,9 +420,9 @@
     // --- INIT ---
     document.getElementById('connect-btn').onclick = connectWallet;
     document.getElementById('crypto-buy').onclick = buyWithCrypto;
-    bind('copper',   'c', 1,  1.8);
-    bind('silver',   's', 5,  2.0);
-    bind('gold',     'g', 20, 2.2);
+    bind('copper', 'c', 1, 1.8);
+    bind('silver', 's', 5, 2.0);
+    bind('gold', 'g', 20, 2.2);
 
     for(let i = 0; i < state.copper.count; i++) createBottlecap('copper');
     updateUI();
