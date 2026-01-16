@@ -42,18 +42,27 @@
             border-bottom: 3px solid #d4af37;
         }
         .money-display { font-size: 24px; color: #d4af37; font-weight: bold; }
-        /* --- WAITING OVERLAY --- */
+
         #waiting-screen {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column;
             justify-content: center; align-items: center; text-align: center; border-radius: 16px;
         }
-        .spinner { width: 50px; height: 50px; border: 5px solid #333; border-top: 5px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        .spinner { 
+            width: 50px; height: 50px; 
+            border: 5px solid #333; 
+            border-top: 5px solid #d4af37; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+            margin-bottom: 15px; 
+        }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         #connect-btn {
             background: #002d72; color: white; border: none; padding: 6px 12px;
             border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold;
         }
+
         .table-top {
             position: relative;
             width: 100%;
@@ -65,60 +74,87 @@
             overflow: hidden;
             touch-action: none;
         }
+
         .bottlecap {
             position: absolute;
-            width: 44px; 
-            height: 44px;
-            background-image: url('https://raw.githubusercontent.com/Lifeskills-hub/bottlecaps/main/bottlecaps.png');
-            background-size: 176px 132px;   /* 4 cols × 44px = 176px wide; 3 rows × 44px = 132px high – ADJUST if sheet size differs */
-            background-repeat: no-repeat;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 22px;
+            font-weight: bold;
+            color: #fff;
             transition: left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
                         top 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                        transform 0.5s, filter 0.3s;
+                        transform 0.5s, filter 0.2s;
             z-index: 10;
             user-select: none;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.3);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.7), inset 0 3px 8px rgba(255,255,255,0.4);
             outline: none;
             cursor: pointer;
-            image-rendering: pixelated;  /* Keeps pixels crisp when scaled */
+            image-rendering: crisp-edges;
         }
+
+        .bottlecap::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.15);
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+
+        .bottlecap::after {
+            content: '';
+            position: absolute;
+            inset: 4px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .bottlecap.copper {
+            background: radial-gradient(circle at 35% 35%, #d2691e, #8b4513 60%, #5c2d0d);
+            border: 2px solid #4a2a0a;
+            color: #ffe4c4;
+            text-shadow: 0 1px 2px #000;
+        }
+
+        .bottlecap.silver {
+            background: radial-gradient(circle at 35% 35%, #e0e0e0, #a0a0a0 50%, #707070);
+            border: 2px solid #505050;
+            color: #f0f0f0;
+            text-shadow: 0 1px 3px #000;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.6), inset 0 4px 10px rgba(255,255,255,0.55);
+        }
+
+        .bottlecap.gold {
+            background: radial-gradient(circle at 35% 35%, #ffd700, #d4af37 50%, #b8860b);
+            border: 2px solid #8a6d00;
+            color: #3e2a00;
+            text-shadow: 0 1px 2px #000;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.5), inset 0 5px 12px rgba(255,255,200,0.7);
+        }
+
         .bottlecap.flipping {
             z-index: 100;
             animation: bottlecap-spin 0.5s linear infinite;
-            transform: scale(2.2);
+            transform: scale(2.4);
             pointer-events: none;
-            filter: brightness(1.5) drop-shadow(0 0 8px gold);
-        }
-        @keyframes bottlecap-spin {
-            0%   { transform: scale(2.2) rotateX(0deg) rotateY(0deg); }
-            100% { transform: scale(2.2) rotateX(360deg) rotateY(180deg); }
+            filter: brightness(1.4);
         }
 
-        /* Sprite positions – tweak these based on your sheet (negative offsets) */
-        /* Example assuming: top row colored/symbols, bottom row plain/rusty */
-        .bottlecap.copper  { background-position: 0px    -88px; }   /* Bottom-left rusty brown */
-        .bottlecap.silver  { background-position: -88px  -88px; }   /* Bottom-middle/right gray */
-        .bottlecap.gold    { background-position: -132px -0px;  }   /* Top-right yellow crown */
+        @keyframes bottlecap-spin {
+            0%   { transform: scale(2.4) rotateX(0deg) rotateY(0deg); }
+            100% { transform: scale(2.4) rotateX(360deg) rotateY(180deg); }
+        }
 
         .bottlecap:hover {
-            filter: brightness(1.3) saturate(1.2);
-            transform: scale(1.1) rotate(3deg);
-        }
-
-        .bottlecap.lose {
-            filter: brightness(0.6) sepia(0.8) hue-rotate(340deg);  /* Reddish "damaged" tint */
-        }
-        .bottlecap.lose::after {
-            content: '💀';
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: rgba(255, 50, 50, 0.9);
-            text-shadow: 0 0 6px black;
-            pointer-events: none;
+            filter: brightness(1.25);
+            transform: scale(1.12);
         }
 
         .controls-row {
@@ -221,10 +257,10 @@
         gold: { count: 0, val: 20, buyCost: 500, upCost: 600 }
     };
     const table = document.getElementById('table');
-    const CAP_SIZE = 44;
+    const CAP_SIZE = 48;
     let audioCtx = null;
 
-    // Wallet connection (previous working version with "any" network mode)
+    // Wallet connection (previous working version)
     async function connectWallet() {
         if (walletConnected) return;
 
@@ -296,7 +332,6 @@
         document.getElementById('waiting-screen').style.display = 'none';
     }
 
-    // Game engine (unchanged except no textContent on caps)
     function playSound(type) {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -330,10 +365,11 @@
         const cap = document.createElement('div');
         cap.className = `bottlecap ${type}`;
         cap.dataset.type = type;
-        const startX = 50 + Math.random() * (table.clientWidth - 100);
-        const startY = 50 + Math.random() * (table.clientHeight - 100);
+        const startX = 50 + Math.random() * (table.clientWidth - 120);
+        const startY = 50 + Math.random() * (table.clientHeight - 120);
         cap.style.left = `${startX}px`;
         cap.style.top = `${startY}px`;
+        cap.textContent = '★';  // simple emblem - you can change to other symbols
         cap.onpointerdown = (e) => {
             e.stopPropagation();
             const currentX = parseFloat(cap.style.left);
@@ -371,12 +407,11 @@
             if (Math.random() > 0.45) {
                 const win = state[type].val;
                 state.money += win;
-                cap.classList.remove('lose');
                 playSound('win');
                 showFloat(newX, newY, `+$${win}`);
             } else {
-                cap.classList.add('lose');
-                setTimeout(() => cap.classList.remove('lose'), 800);
+                cap.textContent = '💀';
+                setTimeout(() => { cap.textContent = '★'; }, 800);
             }
             updateUI();
         }, 500);
